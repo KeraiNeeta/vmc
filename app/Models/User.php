@@ -82,6 +82,16 @@ class User extends Authenticatable
         return $this->hasMany(FireStation::class, 'admin_user_id');
     }
 
+    public function ledTeams(): HasMany
+    {
+        return $this->hasMany(Team::class, 'leader_user_id');
+    }
+
+    public function jobAssignments(): HasMany
+    {
+        return $this->hasMany(JobAssignment::class, 'assigned_by');
+    }
+
     public function hasRole(string $code): bool
     {
         return $this->roles()->where('code', $code)->exists();

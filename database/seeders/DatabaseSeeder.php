@@ -12,5 +12,9 @@ class DatabaseSeeder extends Seeder
             RbacSeeder::class,
             InitialSuperAdminSeeder::class,
         ]);
+
+        if (app()->environment('local')) {
+            $this->call(DemoDispatchSeeder::class);
+        }
     }
 }

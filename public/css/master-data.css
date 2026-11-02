@@ -1,0 +1,72 @@
+.operations-dashboard-page .managed-user-form textarea {
+    width: 100%;
+    min-height: 78px;
+    resize: vertical;
+}
+
+.operations-dashboard-page .field-wide {
+    grid-column: 1 / -1;
+}
+
+.operations-dashboard-page .archive-form {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 14px;
+    border-top: 1px solid #ffffff17;
+}
+
+.operations-dashboard-page .archive-form p {
+    margin: 0;
+    color: #93aaca;
+    font-size: 9px;
+    line-height: 1.5;
+}
+
+.operations-dashboard-page .button-danger {
+    flex: 0 0 auto;
+    border: 1px solid #a34a4e;
+    color: #ffe2e2;
+    background: #702d35;
+}
+
+.operations-dashboard-page .button-danger:hover {
+    background: #8a3540;
+}
+
+.operations-dashboard-page .incident-form .form-grid > label {
+    display: grid;
+    align-content: start;
+    gap: 6px;
+    color: #4d5a62;
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.operations-dashboard-page .incident-form .form-grid > label input,
+.operations-dashboard-page .incident-form .form-grid > label select,
+.operations-dashboard-page .incident-form .form-grid > label textarea {
+    width: 100%;
+    min-width: 0;
+}
+
+.operations-dashboard-page .incident-form .form-grid > label.field-wide {
+    grid-column: 1 / -1;
+}
+
+@media (max-width: 760px) {
+    .operations-dashboard-page .field-wide {
+        grid-column: auto;
+    }
+
+    .operations-dashboard-page .incident-form .form-grid > label.field-wide {
+        grid-column: auto;
+    }
+
+    .operations-dashboard-page .archive-form {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+}

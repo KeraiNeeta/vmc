@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class FireStation extends Model
@@ -47,5 +48,15 @@ class FireStation extends Model
     {
         return $this->belongsToMany(Ward::class, 'station_wards')
             ->withTimestamps();
+    }
+
+    public function vehicles(): HasMany
+    {
+        return $this->hasMany(Vehicle::class);
+    }
+
+    public function teams(): HasMany
+    {
+        return $this->hasMany(Team::class);
     }
 }
