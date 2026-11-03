@@ -1409,8 +1409,53 @@
     color: #c7ddf6;
     background: #123457;
     cursor: pointer;
-    font-size: 17px;
     transition: border-color 140ms ease, background-color 140ms ease, color 140ms ease;
+}
+
+.operations-dashboard-page .sidebar-toggle svg {
+    display: block;
+    width: 19px;
+    height: 19px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-width: 1.8;
+}
+
+.operations-dashboard-page .navigation-icon-sprite {
+    position: absolute;
+    width: 0;
+    height: 0;
+    overflow: hidden;
+}
+
+.operations-dashboard-page .nav-icon {
+    display: inline-grid;
+    flex: 0 0 20px;
+    width: 20px;
+    height: 20px;
+    place-items: center;
+}
+
+.operations-dashboard-page .nav-icon svg,
+.operations-dashboard-page .workspace-icon svg {
+    display: block;
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.75;
+}
+
+.operations-dashboard-page .nav-link,
+.operations-dashboard-page .nav-dropdown-trigger {
+    min-height: 38px;
+}
+
+.operations-dashboard-page .nav-label {
+    min-width: 0;
 }
 
 .operations-dashboard-page .sidebar-toggle:hover {
@@ -1428,12 +1473,81 @@
 }
 
 .operations-dashboard-page.sidebar-hidden .sidebar {
-    transform: translateX(-100%);
-    visibility: hidden;
+    width: 68px;
+    padding-right: 7px;
+    padding-left: 7px;
+    transform: none;
+    visibility: visible;
 }
 
 .operations-dashboard-page.sidebar-hidden .main-column {
-    margin-left: 0;
+    margin-left: 68px;
+}
+
+.operations-dashboard-page.sidebar-hidden .sidebar .brand {
+    justify-content: center;
+    padding-right: 0;
+    padding-left: 0;
+}
+
+.operations-dashboard-page.sidebar-hidden .sidebar .brand > span:not(.brand-mark),
+.operations-dashboard-page.sidebar-hidden .sidebar .workspace > span:not(.workspace-icon),
+.operations-dashboard-page.sidebar-hidden .sidebar .nav-caption,
+.operations-dashboard-page.sidebar-hidden .sidebar .nav-label,
+.operations-dashboard-page.sidebar-hidden .sidebar .nav-dropdown-chevron,
+.operations-dashboard-page.sidebar-hidden .sidebar .sidebar-footer {
+    display: none;
+}
+
+.operations-dashboard-page.sidebar-hidden .sidebar .workspace {
+    min-height: 40px;
+    justify-content: center;
+    margin: 12px 0;
+    padding: 5px;
+}
+
+.operations-dashboard-page.sidebar-hidden .sidebar .workspace-icon {
+    display: grid;
+    width: 27px;
+    height: 27px;
+    flex: 0 0 27px;
+    place-items: center;
+}
+
+.operations-dashboard-page.sidebar-hidden .sidebar .nav-group {
+    margin-bottom: 8px;
+}
+
+.operations-dashboard-page.sidebar-hidden .sidebar .nav-link,
+.operations-dashboard-page.sidebar-hidden .sidebar .nav-dropdown-trigger {
+    width: 52px;
+    min-height: 44px;
+    justify-content: center;
+    gap: 0;
+    margin: 3px auto;
+    padding: 0;
+}
+
+.operations-dashboard-page.sidebar-hidden .sidebar .nav-icon {
+    flex-basis: 22px;
+    width: 22px;
+    height: 22px;
+}
+
+.operations-dashboard-page.sidebar-hidden .sidebar .nav-icon svg {
+    width: 20px;
+    height: 20px;
+}
+
+.operations-dashboard-page.sidebar-hidden .sidebar .nav-dropdown-links {
+    gap: 2px;
+    margin: 4px 0 0;
+    padding: 0;
+    border: 0;
+}
+
+.operations-dashboard-page.sidebar-hidden .sidebar .nav-dropdown-links .nav-link {
+    min-height: 40px;
 }
 
 .operations-dashboard-page .nav-dropdown {
@@ -1499,7 +1613,19 @@
 
 @media (max-width: 760px) {
     .operations-dashboard-page.sidebar-hidden .sidebar {
-        display: none;
+        position: fixed;
+        z-index: 40;
+        display: flex;
+        width: 68px;
+        min-height: 100vh;
+        padding: 12px 7px;
+        overflow-x: hidden;
+        transform: none;
+        visibility: visible;
+    }
+
+    .operations-dashboard-page.sidebar-hidden .main-column {
+        margin-left: 68px;
     }
 
     .operations-dashboard-page .nav-dropdown {
