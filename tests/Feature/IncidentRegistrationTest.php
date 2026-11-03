@@ -35,7 +35,8 @@ class IncidentRegistrationTest extends TestCase
             ->assertJsonPath('data.status_history.0.new_status', EmergencyJob::STATUS_RECEIVED);
 
         $job = EmergencyJob::query()->sole();
-        $this->assertMatchesRegularExpression('/^VMC-\d{8}-[A-Z0-9]{8}$/', $job->job_id);
+        $this->assertMatchesRegularExpression('/^VMC-SOCIETY-ONE-\d{8}-[A-Z0-9]{6}$/', $job->job_id);
+        $this->assertSame('Society One', $job->society_name);
         $this->assertDatabaseHas('job_call_logs', [
             'emergency_job_id' => $job->id,
             'caller_phone' => '+91 98765 43210',
@@ -59,7 +60,7 @@ class IncidentRegistrationTest extends TestCase
         $this->actingAs($operator, 'sanctum');
         $original = $this->postJson('/api/v1/jobs', $this->incidentData($ward))->assertCreated()->json('data');
         $duplicate = $this->postJson('/api/v1/jobs', $this->incidentData($ward, [
-            'caller_phone' => '+91-98765-43210',
+            'caller_phone' => '9876543210',
             'incident_address' => 'Different caller-reported location',
         ]))->assertCreated()->json('data');
 
@@ -190,6 +191,7 @@ class IncidentRegistrationTest extends TestCase
             'priority' => 'HIGH',
             'occurred_at' => now()->subMinutes(5)->toIso8601String(),
             'ward_id' => $ward->id,
+            'society_name' => 'Society One',
             'incident_address' => '10 Test Road, Vadodara',
             'latitude' => 22.3072,
             'longitude' => 73.1812,

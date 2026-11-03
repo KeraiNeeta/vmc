@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\EmergencyJob;
 use App\Models\FireStation;
+use App\Models\JobCallLog;
+use App\Models\JobStatusHistory;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Team;
@@ -11,6 +13,7 @@ use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Ward;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
 
@@ -41,6 +44,7 @@ class PageController extends Controller
                 ],
                 'stations' => collect(),
                 'recentJobs' => collect(),
+                'activityItems' => collect(),
                 'wardStats' => collect(),
                 'mapMarkers' => collect(),
                 'selectedJob' => null,
@@ -105,20 +109,11 @@ class PageController extends Controller
             ]);
         $vehiclesQuery = Vehicle::query();
         $teamsQuery = Team::query();
-        $jobsQuery = EmergencyJob::query();
+        $jobsQuery = $this->visibleJobs($user);
 
         if (! $allStations) {
             $vehiclesQuery->whereIn('fire_station_id', $stationIds);
             $teamsQuery->whereIn('fire_station_id', $stationIds);
-            $jobsQuery->where(function (Builder $jobs) use ($stationIds): void {
-                $jobs->whereHas(
-                    'ward.fireStations',
-                    fn (Builder $stations) => $stations->whereIn('fire_stations.id', $stationIds),
-                )->orWhereHas(
-                    'assignments',
-                    fn (Builder $assignments) => $assignments->whereIn('fire_station_id', $stationIds),
-                );
-            });
         }
 
         $pendingStatuses = [EmergencyJob::STATUS_RECEIVED, EmergencyJob::STATUS_ASSIGNED];
@@ -244,11 +239,19 @@ class PageController extends Controller
             ],
             'stations' => $stations,
             'recentJobs' => $recentJobs,
+            'activityItems' => $canViewJobs ? $this->dashboardActivityItems($user) : collect(),
             'wardStats' => $wardStats,
             'mapMarkers' => $mapMarkers,
             'selectedJob' => $selectedJob,
             'canViewJobs' => $canViewJobs,
             'preview' => false,
+        ]);
+    }
+
+    public function dashboardActivity(Request $request)
+    {
+        return response()->json([
+            'data' => $this->dashboardActivityItems($request->user()),
         ]);
     }
 
@@ -315,8 +318,6 @@ class PageController extends Controller
             'tracking' => ['title' => 'Live GPS tracking', 'category' => 'Field operations', 'phase' => 'Phase 5'],
             'vehicles' => ['title' => 'Vehicles', 'category' => 'Field operations', 'phase' => 'Phase 2'],
             'teams' => ['title' => 'Teams & members', 'category' => 'Field operations', 'phase' => 'Phase 2'],
-            'archive' => ['title' => 'Incident archive', 'category' => 'Records', 'phase' => 'Phase 7'],
-            'reports' => ['title' => 'Reports & analytics', 'category' => 'Insights', 'phase' => 'Phase 6–7'],
             'settings' => ['title' => 'System settings', 'category' => 'Administration', 'phase' => 'Phase 8'],
         ];
         abort_unless(isset($modules[$page]), 404);
@@ -324,7 +325,6 @@ class PageController extends Controller
             $page === 'jobs/new' => 'jobs.create',
             str_starts_with($page, 'jobs/') => 'jobs.view',
             $page === 'tracking' => 'gps.view',
-            $page === 'reports' => 'reports.view',
             $page === 'settings' => 'settings.manage',
             default => 'jobs.view',
         };
@@ -457,6 +457,7 @@ class PageController extends Controller
             'caller_name',
             'caller_phone',
             'incident_type',
+            'society_name',
             'incident_address',
         ])->orderByDesc('occurred_at')->paginate(10)->withQueryString();
     }
@@ -491,5 +492,120 @@ class PageController extends Controller
     private function canViewAllStations(User $user): bool
     {
         return $user->hasRole('SUPER_ADMIN') || $user->hasRole('CONTROL_ROOM_ADMIN');
+    }
+
+    private function visibleJobs(User $user): Builder
+    {
+        $jobs = EmergencyJob::query();
+
+        if (! $this->canViewAllStations($user)) {
+            $stationIds = $this->stationIds($user);
+            $jobs->where(function (Builder $query) use ($stationIds): void {
+                $query->whereHas(
+                    'ward.fireStations',
+                    fn (Builder $stations) => $stations->whereIn('fire_stations.id', $stationIds),
+                )->orWhereHas(
+                    'assignments',
+                    fn (Builder $assignments) => $assignments->whereIn('fire_station_id', $stationIds),
+                );
+            });
+        }
+
+        return $jobs;
+    }
+
+    /**
+     * @return Collection<int, array<string, int|string|null>>
+     */
+    private function dashboardActivityItems(User $user)
+    {
+        $since = now()->subDay();
+        $jobs = $this->visibleJobs($user)
+            ->with('ward:id,name')
+            ->where('created_at', '>=', $since)
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        $calls = JobCallLog::query()
+            ->with(['emergencyJob' => fn (Builder|Relation $query) => $query
+                ->with('ward:id,name')
+                ->whereIn('emergency_jobs.id', $this->visibleJobs($user)->select('emergency_jobs.id'))])
+            ->where('received_at', '>=', $since)
+            ->whereHas(
+                'emergencyJob',
+                fn (Builder $query) => $query->whereIn(
+                    'emergency_jobs.id',
+                    $this->visibleJobs($user)->select('emergency_jobs.id'),
+                ),
+            )
+            ->orderByDesc('received_at')
+            ->limit(10)
+            ->get();
+        $statusEvents = JobStatusHistory::query()
+            ->with(['emergencyJob' => fn (Builder|Relation $query) => $query
+                ->with('ward:id,name')
+                ->whereIn('emergency_jobs.id', $this->visibleJobs($user)->select('emergency_jobs.id'))])
+            ->where('changed_at', '>=', $since)
+            ->whereHas(
+                'emergencyJob',
+                fn (Builder $query) => $query->whereIn(
+                    'emergency_jobs.id',
+                    $this->visibleJobs($user)->select('emergency_jobs.id'),
+                ),
+            )
+            ->orderByDesc('changed_at')
+            ->limit(10)
+            ->get();
+
+        $jobItems = $jobs->map(fn (EmergencyJob $job): array => [
+            'key' => 'job-'.$job->id,
+            'type' => 'NEW JOB',
+            'job_id' => $job->job_id,
+            'caller' => $job->caller_name,
+            'phone' => $job->caller_phone,
+            'incident' => str_replace('_', ' ', $job->incident_type),
+            'society' => $job->society_name ?: ($job->ward?->name ?? 'Area not recorded'),
+            'priority' => $job->priority,
+            'status' => str_replace('_', ' ', $job->status),
+            'time' => $job->created_at?->toIso8601String(),
+            'url' => '/jobs/'.$job->id,
+        ]);
+        $callItems = $calls
+            ->filter(fn (JobCallLog $call): bool => $call->emergencyJob !== null)
+            ->map(fn (JobCallLog $call): array => [
+                'key' => 'call-'.$call->id,
+                'type' => 'NEW CALL',
+                'job_id' => $call->emergencyJob->job_id,
+                'caller' => $call->caller_name,
+                'phone' => $call->caller_phone,
+                'incident' => str_replace('_', ' ', $call->emergencyJob->incident_type),
+                'society' => $call->emergencyJob->society_name ?: ($call->emergencyJob->ward?->name ?? 'Area not recorded'),
+                'priority' => $call->emergencyJob->priority,
+                'status' => str_replace('_', ' ', $call->emergencyJob->status),
+                'time' => $call->received_at?->toIso8601String(),
+                'url' => '/jobs/'.$call->emergency_job_id,
+            ]);
+        $statusItems = $statusEvents
+            ->filter(fn (JobStatusHistory $event): bool => $event->emergencyJob !== null)
+            ->map(fn (JobStatusHistory $event): array => [
+                'key' => 'event-'.$event->id,
+                'type' => $event->new_status === EmergencyJob::STATUS_RECEIVED ? 'NEW JOB' : 'STATUS UPDATE',
+                'job_id' => $event->emergencyJob->job_id,
+                'caller' => $event->emergencyJob->caller_name,
+                'phone' => $event->emergencyJob->caller_phone,
+                'incident' => str_replace('_', ' ', $event->emergencyJob->incident_type),
+                'society' => $event->emergencyJob->society_name ?: ($event->emergencyJob->ward?->name ?? 'Area not recorded'),
+                'priority' => $event->emergencyJob->priority,
+                'status' => str_replace('_', ' ', $event->new_status),
+                'remarks' => $event->remarks,
+                'time' => $event->changed_at?->toIso8601String(),
+                'url' => '/jobs/'.$event->emergency_job_id,
+            ]);
+
+        return $jobItems->concat($callItems)->concat($statusItems)
+            ->sortByDesc('time')
+            ->take(10)
+            ->values();
     }
 }

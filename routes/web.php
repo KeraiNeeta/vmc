@@ -1,9 +1,13 @@
 <?php
 
-use App\Http\Controllers\MasterDataController;
+use App\Http\Controllers\IncidentArchiveController;
 use App\Http\Controllers\IncidentController;
+use App\Http\Controllers\MasterDataController;
+use App\Http\Controllers\OperationsReportController;
+use App\Http\Controllers\OperationsReportExportController;
 use App\Http\Controllers\PageController;
 use App\Http\Controllers\UserManagementController;
+use App\Http\Controllers\VehicleTrackingController;
 use App\Http\Controllers\WebAuthController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +21,9 @@ Route::post('/logout', [WebAuthController::class, 'destroy'])
     ->name('logout');
 
 Route::get('/dashboard', [PageController::class, 'dashboard'])->name('dashboard');
+Route::get('/dashboard/activity', [PageController::class, 'dashboardActivity'])
+    ->middleware(['auth', 'permission:jobs.view'])
+    ->name('dashboard.activity');
 
 foreach (['stations', 'wards', 'vehicles', 'teams'] as $kind) {
     Route::middleware(['auth', 'permission:'.$kind.'.manage'])->group(function () use ($kind): void {
@@ -68,6 +75,10 @@ Route::get('/jobs/{job}', [IncidentController::class, 'show'])
     ->whereNumber('job')
     ->middleware(['auth', 'permission:jobs.view'])
     ->name('app.jobs.show');
+Route::post('/jobs/{job}/archive', [IncidentArchiveController::class, 'archive'])
+    ->whereNumber('job')
+    ->middleware(['auth', 'permission:jobs.archive'])
+    ->name('app.jobs.archive');
 Route::post('/jobs/{job}/duplicate', [IncidentController::class, 'closeDuplicate'])
     ->whereNumber('job')
     ->middleware(['auth', 'permission:jobs.close_duplicate'])
@@ -76,6 +87,32 @@ Route::post('/jobs/{job}/transfer-112', [IncidentController::class, 'transferTo1
     ->whereNumber('job')
     ->middleware(['auth', 'permission:jobs.transfer_112'])
     ->name('app.jobs.transfer-112');
+Route::post('/jobs/{job}/assignments', [IncidentController::class, 'assignResources'])
+    ->whereNumber('job')
+    ->middleware(['auth', 'permission:jobs.assign'])
+    ->name('app.jobs.assignments.store');
+Route::patch('/jobs/{job}/assignments/{assignmentId}/status', [IncidentController::class, 'updateAssignmentStatus'])
+    ->whereNumber('job')
+    ->whereNumber('assignmentId')
+    ->middleware(['auth', 'permission:jobs.update_status'])
+    ->name('app.jobs.assignments.status');
+Route::get('/tracking', [VehicleTrackingController::class, 'index'])
+    ->middleware(['auth', 'permission:gps.view'])
+    ->name('app.tracking');
+Route::get('/reports', [OperationsReportController::class, 'index'])
+    ->middleware(['auth', 'permission:reports.view'])
+    ->name('app.reports');
+Route::get('/reports/operations/export/{format}', [OperationsReportExportController::class, 'export'])
+    ->whereIn('format', ['csv', 'xlsx', 'pdf'])
+    ->middleware(['auth', 'permission:reports.export'])
+    ->name('app.reports.export');
+Route::get('/archive', [IncidentArchiveController::class, 'index'])
+    ->middleware(['auth', 'permission:jobs.archive'])
+    ->name('app.archive');
+Route::post('/archive/{jobId}/restore', [IncidentArchiveController::class, 'restore'])
+    ->whereNumber('jobId')
+    ->middleware(['auth', 'permission:jobs.archive'])
+    ->name('app.archive.restore');
 
 foreach (['stations', 'wards', 'roles', 'vehicles', 'teams', 'jobs'] as $catalog) {
     Route::get('/'.$catalog, [PageController::class, 'catalog'])
@@ -91,9 +128,6 @@ foreach ([
     'jobs/arrived',
     'jobs/in-progress',
     'jobs/completed',
-    'tracking',
-    'archive',
-    'reports',
     'settings',
 ] as $page) {
     Route::get('/'.$page, [PageController::class, 'module'])

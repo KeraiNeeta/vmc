@@ -8,6 +8,16 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class JobAssignment extends Model
 {
+    public const STATUS_ASSIGNED = 'ASSIGNED';
+
+    public const STATUS_EN_ROUTE = 'EN_ROUTE';
+
+    public const STATUS_ARRIVED = 'ARRIVED';
+
+    public const STATUS_IN_PROGRESS = 'IN_PROGRESS';
+
+    public const STATUS_COMPLETED = 'COMPLETED';
+
     protected $fillable = [
         'emergency_job_id',
         'fire_station_id',

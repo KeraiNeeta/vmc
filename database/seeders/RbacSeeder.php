@@ -19,6 +19,7 @@ class RbacSeeder extends Seeder
             'jobs.assign' => ['Assign jobs', 'Assign vehicles and teams to jobs.'],
             'jobs.close_duplicate' => ['Close duplicate jobs', 'Close a job confirmed as already handled.'],
             'jobs.transfer_112' => ['Transfer jobs to 112', 'Record a transfer to the 112 service.'],
+            'jobs.archive' => ['Archive closed jobs', 'Archive and restore closed incidents without deleting operational history.'],
             'stations.view' => ['View fire stations', 'View permitted fire station records.'],
             'stations.manage' => ['Manage fire stations', 'Create and update permitted fire stations.'],
             'wards.view' => ['View wards', 'View permitted ward records.'],
@@ -50,6 +51,7 @@ class RbacSeeder extends Seeder
                 'permissions' => [
                     'dashboard.view', 'jobs.view', 'jobs.create', 'jobs.update_status', 'jobs.assign',
                     'jobs.close_duplicate', 'jobs.transfer_112', 'stations.view', 'wards.view',
+                    'jobs.archive',
                     'stations.manage', 'wards.manage', 'vehicles.view', 'vehicles.manage',
                     'teams.view', 'teams.manage', 'gps.view', 'reports.view', 'reports.export',
                     'users.view', 'users.manage',
@@ -60,8 +62,10 @@ class RbacSeeder extends Seeder
                 'description' => 'Manage operations within assigned fire stations.',
                 'permissions' => [
                     'dashboard.view', 'jobs.view', 'jobs.update_status', 'jobs.assign',
+                    'jobs.archive',
                     'stations.view', 'wards.view', 'wards.manage', 'vehicles.view', 'vehicles.manage',
-                    'teams.view', 'teams.manage', 'gps.view', 'reports.view', 'users.view', 'users.manage', 'roles.view',
+                    'teams.view', 'teams.manage', 'gps.view', 'reports.view', 'reports.export',
+                    'users.view', 'users.manage', 'roles.view',
                 ],
             ],
             'DISPATCH_OPERATOR' => [
@@ -70,13 +74,14 @@ class RbacSeeder extends Seeder
                 'permissions' => [
                     'dashboard.view', 'jobs.view', 'jobs.create', 'jobs.update_status', 'jobs.assign',
                     'jobs.close_duplicate', 'jobs.transfer_112', 'stations.view', 'wards.view',
+                    'jobs.archive',
                     'vehicles.view', 'teams.view', 'gps.view',
                 ],
             ],
             'VEHICLE_DRIVER' => [
                 'name' => 'Vehicle Driver',
-                'description' => 'View assigned jobs, update assignment status, and submit GPS.',
-                'permissions' => ['jobs.view', 'jobs.update_status', 'gps.update'],
+                'description' => 'View assigned jobs and vehicle tracking, update assignment status, and submit GPS.',
+                'permissions' => ['jobs.view', 'jobs.update_status', 'gps.view', 'gps.update'],
             ],
             'TEAM_MEMBER' => [
                 'name' => 'Team Member',

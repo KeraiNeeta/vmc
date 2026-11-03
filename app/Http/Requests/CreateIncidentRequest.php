@@ -21,6 +21,7 @@ class CreateIncidentRequest extends FormRequest
             'priority' => ['required', 'in:LOW,NORMAL,HIGH,CRITICAL'],
             'occurred_at' => ['required', 'date', 'before_or_equal:now'],
             'ward_id' => ['required', 'integer', 'exists:wards,id'],
+            'society_name' => ['required', 'string', 'max:255'],
             'incident_address' => ['required', 'string', 'max:2000'],
             'latitude' => ['nullable', 'numeric', 'between:-90,90'],
             'longitude' => ['nullable', 'numeric', 'between:-180,180'],

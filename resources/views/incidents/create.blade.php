@@ -19,19 +19,18 @@
         @if ($callerSearch !== '')
             <div class="table-scroll">
                 <table>
-                    <thead><tr><th>Job ID</th><th>Caller</th><th>Incident</th><th>Ward</th><th>Status</th><th>Received</th></tr></thead>
+                    <thead><tr><th>Job ID</th><th>Society / caller / contact</th><th>Emergency</th><th>Status</th><th>Received</th></tr></thead>
                     <tbody>
                     @forelse ($callerResults as $candidate)
                         <tr>
                             <td><a class="text-link" href="{{ route('app.jobs.show', $candidate->id) }}">{{ $candidate->job_id }}</a></td>
-                            <td>{{ $candidate->caller_name }}<small>{{ $candidate->caller_phone }}</small></td>
-                            <td>{{ str_replace('_', ' ', $candidate->incident_type) }}</td>
-                            <td>{{ $candidate->ward?->name ?? '—' }}</td>
+                            <td><strong>{{ $candidate->society_name ?: ($candidate->ward?->name ?? 'Area not recorded') }}</strong><small>{{ $candidate->caller_name }}</small><small>{{ $candidate->caller_phone }}</small></td>
+                            <td>{{ str_replace('_', ' ', $candidate->incident_type) }}<small>{{ str_replace('_', ' ', $candidate->priority) }} severity</small></td>
                             <td><span class="status">{{ str_replace('_', ' ', $candidate->status) }}</span></td>
                             <td>{{ $candidate->occurred_at->format('M j, Y g:i A') }}</td>
                         </tr>
                     @empty
-                        <tr><td colspan="6" class="empty-cell">No recent caller records found in your authorized station scope.</td></tr>
+                        <tr><td colspan="5" class="empty-cell">No recent caller records found in your authorized station scope.</td></tr>
                     @endforelse
                     </tbody>
                 </table>
@@ -69,7 +68,7 @@
                     </select>
                 </label>
                 <label>Incident time<input type="datetime-local" name="occurred_at" value="{{ old('occurred_at', now()->format('Y-m-d\\TH:i')) }}" required></label>
-                <label>Ward
+                <label>Ward / zone
                     <select name="ward_id" required>
                         <option value="">Select ward</option>
                         @foreach ($wards as $ward)
@@ -77,6 +76,7 @@
                         @endforeach
                     </select>
                 </label>
+                <label>Society / area<input name="society_name" value="{{ old('society_name') }}" required maxlength="255" placeholder="Society, neighborhood or landmark"></label>
                 <label class="field-wide">Incident address<textarea name="incident_address" required maxlength="2000" rows="3">{{ old('incident_address') }}</textarea></label>
                 <label>Latitude<input type="number" name="latitude" value="{{ old('latitude') }}" min="-90" max="90" step="any"></label>
                 <label>Longitude<input type="number" name="longitude" value="{{ old('longitude') }}" min="-180" max="180" step="any"></label>

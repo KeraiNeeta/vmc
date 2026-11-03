@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api\V1;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\AssignJobResourcesRequest;
 use App\Http\Requests\CloseDuplicateIncidentRequest;
 use App\Http\Requests\CreateIncidentRequest;
 use App\Http\Requests\TransferIncidentTo112Request;
+use App\Http\Requests\UpdateAssignmentStatusRequest;
 use App\Http\Resources\EmergencyJobResource;
 use App\Models\EmergencyJob;
 use App\Services\IncidentWorkflow;
@@ -28,7 +30,7 @@ class IncidentController extends Controller
         $search = trim($validated['search'] ?? '');
         if ($search !== '') {
             $query->where(function (Builder $jobs) use ($search): void {
-                foreach (['job_id', 'caller_name', 'caller_phone', 'incident_type', 'incident_address'] as $column) {
+                foreach (['job_id', 'caller_name', 'caller_phone', 'incident_type', 'society_name', 'incident_address'] as $column) {
                     $jobs->orWhereLike($column, '%'.$search.'%');
                 }
             });
@@ -66,6 +68,7 @@ class IncidentController extends Controller
                 'occurred_at' => $job->occurred_at->toIso8601String(),
                 'status' => $job->status,
                 'ward' => $job->ward?->name,
+                'society' => $job->society_name,
             ]),
         ]);
     }
@@ -100,6 +103,30 @@ class IncidentController extends Controller
             $job,
             $request->validated('reference_number'),
             $request->validated('details'),
+        );
+
+        return (new EmergencyJobResource($job))->response();
+    }
+
+    public function assignResources(AssignJobResourcesRequest $request, int $id): JsonResponse
+    {
+        $job = $this->workflow->findVisibleJobOrFail($request->user(), $id);
+        $job = $this->workflow->assignResources($request->user(), $job, $request->validated());
+
+        return (new EmergencyJobResource($job))->response();
+    }
+
+    public function updateAssignmentStatus(
+        UpdateAssignmentStatusRequest $request,
+        int $id,
+        int $assignmentId,
+    ): JsonResponse {
+        $job = $this->workflow->findVisibleJobOrFail($request->user(), $id);
+        $job = $this->workflow->updateAssignmentStatus(
+            $request->user(),
+            $job,
+            $assignmentId,
+            $request->validated(),
         );
 
         return (new EmergencyJobResource($job))->response();

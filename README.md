@@ -1,6 +1,6 @@
 ## Emergency Dispatch Management System
 
-Laravel 12 application and REST API foundation for a multi-station fire brigade and ambulance dispatch system. Server-rendered Blade pages provide a live, permission-scoped dashboard and searchable station, ward, vehicle, team, incident, user, and role directories. Phase 2 master-data management and Phase 3 incident intake, caller lookup, duplicate closure, and 112 handoff are implemented. Resource assignment and GPS ingestion remain scheduled work.
+Laravel 12 application and REST API foundation for a multi-station fire brigade and ambulance dispatch system. Server-rendered Blade pages provide a live, permission-scoped dashboard and searchable station, ward, vehicle, team, incident, user, and role directories. Phases 2–7 cover master data, incident intake, multi-unit dispatch, GPS tracking, operational analytics, archive, and exports.
 
 ### Phase 1 implementation
 
@@ -21,7 +21,58 @@ Laravel 12 application and REST API foundation for a multi-station fire brigade 
 - Close only unassigned, newly received incidents as duplicates after confirming the original job has the same caller number. The duplicate link and actor are retained as an external reference and audit event.
 - Transfer only unassigned, newly received incidents to 112 with a required external reference number; duplicate and 112 statuses remain distinct.
 - Server-rendered incident registration/detail pages and pending, duplicate, and 112 directories.
+- Dashboard carousel rotates recent new-job and incoming-call records, refreshes the permission-scoped feed every 15 seconds, and links directly to the incident.
+- Society/area is stored with each incident, included in location-based public job IDs, and shown with caller and contact details in operational views.
 - Authenticated API endpoints: `GET /api/v1/jobs`, `POST /api/v1/jobs`, `GET /api/v1/callers/search`, `POST /api/v1/jobs/{id}/duplicate`, and `POST /api/v1/jobs/{id}/transfer-112`.
+
+### Phase 4 implementation
+
+- Assign multiple available vehicles, optionally paired with teams, to one incident in a single transaction. Assignment checks station scope, ward coverage, active station/resource state, and prevents duplicate or already-deployed resources.
+- Track each unit through `ASSIGNED → EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED`; reject skipped or invalid transitions and capture optional notes and coordinates.
+- Update vehicle/team availability on dispatch and release, derive the incident's aggregate status from all assignments, and audit each dispatch/status change.
+- Vehicle drivers can update only assignments for their assigned team leader or active team membership; station membership alone does not grant driver access to other units.
+- Incident detail page shows active assignments, per-unit status controls, resource selection, and a timeline identifying which vehicle produced each status event.
+- Authenticated API endpoints: `POST /api/v1/jobs/{id}/assignments` and `PATCH /api/v1/jobs/{id}/assignments/{assignmentId}/status`.
+
+### Phase 5 implementation
+
+- Accept authenticated GPS points for active vehicle assignments, validate geographic, speed, and time ranges, reject stale points, and update the latest vehicle coordinates transactionally.
+- Restrict driver uploads and route history to vehicles and assignments tied to their active team membership or leadership; operational tracking respects station scope.
+- Vehicle drivers need to be the leader or an active member of the response team attached to the assignment; assignments without a linked team cannot accept driver GPS uploads.
+- Record the authenticated receiver for each GPS point and audit accepted location updates.
+- Show latest vehicle positions and assignment route history in the tracking page and API; route queries default to the last 24 hours and are capped at 500 points per request.
+- Authenticated API endpoints: `GET /api/v1/tracking`, `GET /api/v1/vehicles/{vehicle}/gps`, and `POST /api/v1/vehicles/{vehicle}/gps`.
+
+### Phase 6 implementation
+
+- The permission-protected `/reports` dashboard summarizes incidents by date range and accessible station, including status, priority, incident type, daily volume, station deployments, and completion counts.
+- Show average response and resolution times only for jobs with the corresponding recorded status history; these descriptive metrics are not SLA guarantees.
+- Report date ranges are limited to 90 days, and station filters outside the signed-in user's station scope are rejected.
+- Authenticated API endpoint: `GET /api/v1/reports/operations` (requires `reports.view`; accepts `from`, `to`, and optional `station_id` query parameters).
+
+### Phase 7 implementation
+
+- Archive only completed, duplicate, or transferred incidents with no active unit assignments. Archiving uses reversible soft deletion and retains related call, dispatch, status, and audit history.
+- The permission-protected `/archive` directory supports station-scoped search and restore actions; archive/restore actions are audited. API actions: `POST /api/v1/jobs/{id}/archive` and `POST /api/v1/jobs/{id}/restore` (requires `jobs.archive`).
+- Export operational reports as CSV, Excel (`.xlsx`), or PDF with the selected reporting period and station filter. Downloads require `reports.export` and reuse report validation and station scoping.
+
+### Phase 8 implementation
+
+- Add baseline browser/API security headers and HSTS only for HTTPS requests.
+- Enforce account-active status after Sanctum authentication; reject and revoke tokens for accounts deactivated outside the normal user-management workflow.
+- Login throttling limits attempts per IP/account and adds a shared per-IP ceiling to slow password spraying across different account names.
+- API access is permission- and station-scoped, catalogue responses are paginated, report and GPS history ranges are bounded, and GPS ingestion is rate-limited.
+
+### Production deployment checklist
+
+- Set `APP_ENV=production`, `APP_DEBUG=false`, a unique secret `APP_KEY`, and an HTTPS `APP_URL`; configure trusted proxies and hosts for the actual reverse-proxy topology.
+- Set `SESSION_SECURE_COOKIE=true`, keep `SESSION_HTTP_ONLY=true` and `SESSION_SAME_SITE=lax`, and use a strong private PostgreSQL credential with network access restricted to the application.
+- Require PHP 8.2+ with `pdo_pgsql`, `gd`, and `zip`; run `composer install --no-dev --prefer-dist --optimize-autoloader` and `php artisan migrate --force`.
+- Run `composer audit` during release preparation and update affected dependencies before deployment.
+- Seed system permissions when upgrading, then prepare configuration, route, and view caches with `php artisan config:cache`, `php artisan route:cache`, and `php artisan view:cache`.
+- Keep `storage/` and `bootstrap/cache/` writable by the application user; configure persistent database/Redis cache, session, and queue services appropriate to the deployment.
+- Run queue workers under a process manager, configure scheduled tasks and log rotation, and verify PostgreSQL backups and restore procedures before production traffic.
+- Serve only over HTTPS, restrict inbound database access, keep `.env` and generated exports private, and monitor `/up`, queue failures, authentication throttles, and application errors.
 
 ### Recommended project structure
 
@@ -79,7 +130,7 @@ The migrations establish the identity and authorization tables as well as `vehic
 
 ### Setup
 
-Requirements: PHP 8.2+ with `pdo_pgsql`, Composer, and PostgreSQL. The server-rendered pages do not require Node.js/npm.
+Requirements: PHP 8.2+ with `pdo_pgsql`, `gd`, and `zip` extensions; Composer; and PostgreSQL. The server-rendered pages do not require Node.js/npm.
 
 1. Copy `.env.example` to `.env` and set `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` for a PostgreSQL database you created.
 2. Set `INITIAL_SUPER_ADMIN_EMAIL` and a private `INITIAL_SUPER_ADMIN_PASSWORD` of at least 14 characters before seeding if an initial administrator is needed.
@@ -94,6 +145,7 @@ Requirements: PHP 8.2+ with `pdo_pgsql`, Composer, and PostgreSQL. The server-re
 4. Start the API with `php artisan serve`. Routes are listed by `php artisan route:list --path=api`.
 
 Do not commit `.env` or use a default/shared administrator password. If no initial admin credentials are configured, seeding creates the system roles and prints a warning without creating a login.
+After upgrading an existing deployment, run `php artisan db:seed --class=RbacSeeder` to add the archive and report-export permissions to existing system roles.
 
 ### User hierarchy and local demo records
 
@@ -132,6 +184,7 @@ Read and write permissions are separate (`stations.view/manage`, `wards.view/man
 ```powershell
 php artisan test
 vendor\bin\pint.bat --test
+composer audit
 ```
 
 Tests use SQLite in memory. Configure PostgreSQL credentials before running PostgreSQL migrations locally.
@@ -141,8 +194,8 @@ Tests use SQLite in memory. Configure PostgreSQL credentials before running Post
 1. **Foundation (implemented):** inspect/scaffold, PostgreSQL configuration, API auth, RBAC, station/ward schema.
 2. **Master data (implemented):** searchable station, ward, vehicle, and team directories; station-scoped create/update/archive forms and APIs; team membership; role-based permissions; audit logging.
 3. **Incident intake (implemented):** incident registration, caller search, duplicate detection, and 112 handoff workflows.
-4. Multi-vehicle assignment, status transitions, timeline, and history.
-5. Authenticated GPS ingestion, tracking map, and route history.
-6. Expanded operational reporting and analytics beyond the current live station/ward dashboard.
-7. Archive, reports, and CSV/Excel/PDF exports.
-8. Security, API, performance, and deployment verification.
+4. **Dispatch operations (implemented):** multi-vehicle assignment, sequential status transitions, timeline, and history.
+5. **Vehicle tracking (implemented):** authenticated GPS ingestion, latest-location map, and assignment route history.
+6. **Operational reports and analytics (implemented):** date- and station-filtered incident trends, distributions, response metrics, and deployment workload.
+7. **Archive and exports (implemented):** reversible incident archiving and scoped CSV/Excel/PDF operational report downloads.
+8. **Security, API, performance, and deployment verification (implemented):** account-active API enforcement, layered login throttling, security response headers, bounded query surfaces, and production deployment checklist.

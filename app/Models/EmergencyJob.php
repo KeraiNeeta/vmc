@@ -36,6 +36,7 @@ class EmergencyJob extends Model
         'priority',
         'occurred_at',
         'ward_id',
+        'society_name',
         'incident_address',
         'latitude',
         'longitude',

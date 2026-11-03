@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Requests\AssignJobResourcesRequest;
 use App\Http\Requests\CloseDuplicateIncidentRequest;
 use App\Http\Requests\CreateIncidentRequest;
 use App\Http\Requests\TransferIncidentTo112Request;
+use App\Http\Requests\UpdateAssignmentStatusRequest;
 use App\Models\EmergencyJob;
 use App\Models\Ward;
 use App\Services\IncidentWorkflow;
@@ -59,7 +61,7 @@ class IncidentController extends Controller
 
         if ($search !== '') {
             $query->where(function (Builder $jobs) use ($search): void {
-                foreach (['job_id', 'caller_name', 'caller_phone', 'incident_type', 'incident_address'] as $column) {
+                foreach (['job_id', 'caller_name', 'caller_phone', 'incident_type', 'society_name', 'incident_address'] as $column) {
                     $jobs->orWhereLike($column, '%'.$search.'%');
                 }
             });
@@ -91,17 +93,30 @@ class IncidentController extends Controller
             'assignments.fireStation:id,name,code',
             'assignments.vehicle:id,vehicle_number',
             'assignments.team:id,name',
+            'assignments.teamLeader',
+            'assignments.assigner:id,name',
             'statusHistory.actor:id,name',
+            'statusHistory.assignment.vehicle:id,vehicle_number',
             'externalReferences.creator:id,name',
         ]);
+        $canAssign = $request->user()->hasPermission('jobs.assign')
+            && in_array($job->status, [EmergencyJob::STATUS_RECEIVED, EmergencyJob::STATUS_ASSIGNED], true);
 
         return view('incidents.show', [
             'job' => $job,
+            'assignableStations' => $canAssign ? $this->workflow->assignableStations($request->user(), $job) : collect(),
+            'canAssign' => $canAssign,
+            'updatableAssignmentIds' => $job->assignments
+                ->filter(fn ($assignment): bool => $this->workflow->canUpdateAssignment($request->user(), $assignment))
+                ->modelKeys(),
             'possibleDuplicates' => $job->status === EmergencyJob::STATUS_RECEIVED
                 ? $this->workflow->possibleDuplicates($request->user(), $job->caller_phone, $job->id)
                 : collect(),
             'canCloseDuplicate' => $request->user()->hasPermission('jobs.close_duplicate'),
             'canTransferTo112' => $request->user()->hasPermission('jobs.transfer_112'),
+            'canArchive' => $request->user()->hasPermission('jobs.archive')
+                && $this->workflow->isArchivable($job)
+                && ! $job->assignments->contains(fn ($assignment): bool => $assignment->released_at === null),
         ]);
     }
 
@@ -127,5 +142,27 @@ class IncidentController extends Controller
         );
 
         return redirect()->route('app.jobs.show', $job)->with('status', 'Incident transfer to 112 recorded.');
+    }
+
+    public function assignResources(AssignJobResourcesRequest $request, EmergencyJob $job)
+    {
+        $this->workflow->assignResources($request->user(), $job, $request->validated());
+
+        return redirect()->route('app.jobs.show', $job)->with('status', 'Response resources assigned.');
+    }
+
+    public function updateAssignmentStatus(
+        UpdateAssignmentStatusRequest $request,
+        EmergencyJob $job,
+        int $assignmentId,
+    ) {
+        $this->workflow->updateAssignmentStatus(
+            $request->user(),
+            $job,
+            $assignmentId,
+            $request->validated(),
+        );
+
+        return redirect()->route('app.jobs.show', $job)->with('status', 'Unit status updated.');
     }
 }

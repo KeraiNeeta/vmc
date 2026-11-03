@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Vehicle extends Model
@@ -51,5 +52,10 @@ class Vehicle extends Model
     public function gpsLogs(): HasMany
     {
         return $this->hasMany(VehicleGpsLog::class);
+    }
+
+    public function latestGpsLog(): HasOne
+    {
+        return $this->hasOne(VehicleGpsLog::class)->ofMany('recorded_at', 'max');
     }
 }

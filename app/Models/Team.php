@@ -12,6 +12,10 @@ class Team extends Model
 {
     use SoftDeletes;
 
+    public const STATUS_AVAILABLE = 'AVAILABLE';
+
+    public const STATUS_DEPLOYED = 'DEPLOYED';
+
     protected $fillable = [
         'fire_station_id',
         'leader_user_id',

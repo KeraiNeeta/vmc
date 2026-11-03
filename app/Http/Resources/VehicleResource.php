@@ -27,6 +27,7 @@ class VehicleResource extends JsonResource
             'latitude' => $this->latitude === null ? null : (float) $this->latitude,
             'longitude' => $this->longitude === null ? null : (float) $this->longitude,
             'status' => $this->status,
+            'last_gps_at' => $this->whenLoaded('latestGpsLog', fn () => $this->latestGpsLog?->recorded_at?->toIso8601String()),
             'last_service_at' => $this->last_service_at,
             'created_at' => $this->created_at,
         ];

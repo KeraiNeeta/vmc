@@ -27,11 +27,14 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::before(static fn (User $user): ?bool => $user->hasRole('SUPER_ADMIN') ? true : null);
 
-        RateLimiter::for('login', static function (Request $request): Limit {
+        RateLimiter::for('login', static function (Request $request): array {
             $email = $request->input('email');
             $key = is_string($email) ? Str::lower(trim($email)) : 'unknown';
 
-            return Limit::perMinute(5)->by($request->ip().'|'.$key);
+            return [
+                Limit::perMinute(5)->by('login-email:'.$request->ip().'|'.$key),
+                Limit::perMinute(60)->by('login-ip:'.$request->ip()),
+            ];
         });
     }
 }

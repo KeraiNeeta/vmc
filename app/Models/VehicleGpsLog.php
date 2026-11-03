@@ -12,6 +12,7 @@ class VehicleGpsLog extends Model
     protected $fillable = [
         'vehicle_id',
         'job_assignment_id',
+        'received_by',
         'latitude',
         'longitude',
         'speed_kph',
@@ -36,5 +37,10 @@ class VehicleGpsLog extends Model
     public function assignment(): BelongsTo
     {
         return $this->belongsTo(JobAssignment::class, 'job_assignment_id');
+    }
+
+    public function receiver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'received_by');
     }
 }

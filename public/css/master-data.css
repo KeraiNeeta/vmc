@@ -56,6 +56,105 @@
     grid-column: 1 / -1;
 }
 
+.operations-dashboard-page .ops-activity-carousel {
+    display: grid;
+    min-height: 172px;
+    align-content: space-between;
+    gap: 12px;
+    padding: 12px;
+    border: 1px solid #ffffff16;
+    border-radius: 9px;
+    background: linear-gradient(135deg, #102d52, #0b2141);
+}
+
+.operations-dashboard-page .ops-activity-slide {
+    display: grid;
+    min-height: 120px;
+    align-content: start;
+    gap: 8px;
+    color: #eaf3ff;
+    text-decoration: none;
+}
+
+.operations-dashboard-page .ops-activity-slide[hidden] {
+    display: none;
+}
+
+.operations-dashboard-page .ops-activity-slide:hover .ops-activity-job {
+    color: #72d6bd;
+}
+
+.operations-dashboard-page .ops-activity-topline {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+}
+
+.operations-dashboard-page .ops-activity-kind {
+    padding: 4px 7px;
+    border: 1px solid #378b78;
+    border-radius: 999px;
+    color: #9af0d4;
+    background: #14624d55;
+    font-size: 8px;
+    font-weight: 750;
+    letter-spacing: .06em;
+}
+
+.operations-dashboard-page .ops-activity-kind.is-job {
+    border-color: #4a7fbd;
+    color: #b6d7ff;
+    background: #174b8055;
+}
+
+.operations-dashboard-page .ops-activity-topline time,
+.operations-dashboard-page .ops-activity-caller,
+.operations-dashboard-page .ops-activity-description {
+    color: #a9bfdc;
+    font-size: 9px;
+}
+
+.operations-dashboard-page .ops-activity-job {
+    color: #fff;
+    font-size: 15px;
+}
+
+.operations-dashboard-page .ops-activity-status {
+    color: #8be1c4;
+    font-size: 9px;
+    font-weight: 650;
+    text-transform: uppercase;
+}
+
+.operations-dashboard-page .ops-activity-controls {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    color: #a9bfdc;
+    font-size: 9px;
+}
+
+.operations-dashboard-page .ops-activity-controls[hidden] {
+    display: none;
+}
+
+.operations-dashboard-page .ops-activity-arrow {
+    width: 25px;
+    height: 25px;
+    border: 1px solid #ffffff2a;
+    border-radius: 6px;
+    color: #eaf3ff;
+    background: #ffffff0b;
+    cursor: pointer;
+}
+
+.operations-dashboard-page .ops-activity-arrow:hover {
+    border-color: #58bba0;
+    background: #16785c;
+}
+
 @media (max-width: 760px) {
     .operations-dashboard-page .field-wide {
         grid-column: auto;

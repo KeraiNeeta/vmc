@@ -10,6 +10,9 @@
     <link rel="stylesheet" href="{{ asset('css/operations-theme.css') }}">
     <link rel="stylesheet" href="{{ asset('css/dashboard-reference.css') }}">
     <link rel="stylesheet" href="{{ asset('css/master-data.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/tracking.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/reports.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/dashboard-polish.css') }}?v={{ filemtime(public_path('css/dashboard-polish.css')) }}">
 </head>
 <body class="operations-dashboard-page {{ request()->routeIs('dashboard') ? 'operations-dashboard-layout' : '' }}">
 @php
@@ -18,13 +21,14 @@
         ['section' => null, 'links' => [
             ['label' => 'Dashboard', 'route' => 'dashboard', 'permission' => 'dashboard.view', 'icon' => '▦'],
         ]],
-        ['section' => 'Emergency desk', 'links' => [
+        ['section' => 'Emergency desk', 'dropdown' => ['label' => 'Jobs', 'icon' => '▤'], 'links' => [
             ['label' => 'All jobs', 'route' => 'app.jobs', 'permission' => 'jobs.view', 'icon' => '▤'],
             ['label' => 'New registration', 'route' => 'app.jobs.new', 'permission' => 'jobs.create', 'icon' => '+'],
             ['label' => 'Pending jobs', 'route' => 'app.jobs.pending', 'permission' => 'jobs.view', 'icon' => '◷'],
             ['label' => 'Duplicate calls', 'route' => 'app.jobs.duplicates', 'permission' => 'jobs.view', 'icon' => '↔'],
             ['label' => 'Transferred to 112', 'route' => 'app.jobs.transferred', 'permission' => 'jobs.view', 'icon' => '⇢'],
             ['label' => 'Active jobs', 'route' => 'app.jobs.active', 'permission' => 'jobs.view', 'icon' => '◉'],
+            ['label' => 'Incident archive', 'route' => 'app.archive', 'permission' => 'jobs.archive', 'icon' => '▣'],
         ]],
         ['section' => 'Field operations', 'links' => [
             ['label' => 'Live GPS tracking', 'route' => 'app.tracking', 'permission' => 'gps.view', 'icon' => '⌖'],
@@ -42,7 +46,7 @@
     ];
 @endphp
 <div class="shell">
-    <aside class="sidebar">
+    <aside class="sidebar" id="app-sidebar">
         <a class="brand" href="{{ route('dashboard') }}">
             <span class="brand-mark">VMC</span>
             <span><strong>Vadodara</strong><small>EMERGENCY RESPONSE</small></span>
@@ -56,13 +60,41 @@
                 @if ($visibleLinks->isNotEmpty())
                     <div class="nav-group">
                         @if ($group['section']) <div class="nav-caption">{{ $group['section'] }}</div> @endif
-                        @foreach ($visibleLinks as $link)
-                            @if (Route::has($link['route']))
-                                <a class="nav-link {{ request()->routeIs($link['route']) || ($link['route'] === 'dashboard' && request()->routeIs('home')) ? 'active' : '' }}" href="{{ route($link['route']) }}">
-                                    <span class="nav-icon">{{ $link['icon'] }}</span>{{ $link['label'] }}
-                                </a>
-                            @endif
-                        @endforeach
+                        @if (!empty($group['dropdown']))
+                            @php
+                                $hasActiveLink = request()->routeIs('app.jobs.*', 'app.archive*')
+                                    || $visibleLinks->contains(fn ($link) => Route::has($link['route']) && request()->routeIs($link['route']));
+                            @endphp
+                            <details class="nav-dropdown" @if ($hasActiveLink) open @endif>
+                                <summary class="nav-link nav-dropdown-trigger {{ $hasActiveLink ? 'active' : '' }}">
+                                    <span class="nav-icon">{{ $group['dropdown']['icon'] }}</span>
+                                    <span>{{ $group['dropdown']['label'] }}</span>
+                                    <span class="nav-dropdown-chevron" aria-hidden="true">⌄</span>
+                                </summary>
+                                <div class="nav-dropdown-links">
+                                    @foreach ($visibleLinks as $link)
+                                        @if (Route::has($link['route']))
+                                            @php
+                                                $isActiveLink = request()->routeIs($link['route'])
+                                                    || ($link['route'] === 'app.jobs' && request()->routeIs('app.jobs.show'))
+                                                    || ($link['route'] === 'app.archive' && request()->routeIs('app.archive.*'));
+                                            @endphp
+                                            <a class="nav-link {{ $isActiveLink ? 'active' : '' }}" href="{{ route($link['route']) }}">
+                                                <span class="nav-icon">{{ $link['icon'] }}</span>{{ $link['label'] }}
+                                            </a>
+                                        @endif
+                                    @endforeach
+                                </div>
+                            </details>
+                        @else
+                            @foreach ($visibleLinks as $link)
+                                @if (Route::has($link['route']))
+                                    <a class="nav-link {{ request()->routeIs($link['route']) || ($link['route'] === 'dashboard' && request()->routeIs('home')) ? 'active' : '' }}" href="{{ route($link['route']) }}">
+                                        <span class="nav-icon">{{ $link['icon'] }}</span>{{ $link['label'] }}
+                                    </a>
+                                @endif
+                            @endforeach
+                        @endif
                     </div>
                 @endif
             @endforeach
@@ -72,6 +104,9 @@
     <div class="main-column">
         <header class="topbar">
             <div class="app-heading">
+                <button class="sidebar-toggle" type="button" data-sidebar-toggle aria-controls="app-sidebar" aria-expanded="true" aria-label="Hide sidebar" title="Hide sidebar">
+                    <span aria-hidden="true">☰</span>
+                </button>
                 <span class="app-alert-icon" aria-hidden="true">🚨</span>
                 <span><strong>Emergency Response System</strong><small>Ambulance &amp; Fire Brigade · Vadodara</small></span>
             </div>
@@ -92,5 +127,20 @@
         <footer class="footer"><strong>Responda Operations</strong><span>Secure emergency response management</span></footer>
     </div>
 </div>
+<script>
+(() => {
+    const toggle = document.querySelector('[data-sidebar-toggle]');
+    const sidebar = document.getElementById('app-sidebar');
+    if (!toggle || !sidebar) return;
+
+    toggle.addEventListener('click', () => {
+        const isExpanded = toggle.getAttribute('aria-expanded') === 'true';
+        document.body.classList.toggle('sidebar-hidden', isExpanded);
+        toggle.setAttribute('aria-expanded', String(!isExpanded));
+        toggle.setAttribute('aria-label', isExpanded ? 'Show sidebar' : 'Hide sidebar');
+        toggle.setAttribute('title', isExpanded ? 'Show sidebar' : 'Hide sidebar');
+    });
+})();
+</script>
 </body>
 </html>

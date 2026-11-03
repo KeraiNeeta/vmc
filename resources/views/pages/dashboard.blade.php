@@ -13,7 +13,9 @@
     ];
 @endphp
 <section class="ops-dashboard">
-    <h1 class="ops-visually-hidden">Operations dashboard</h1>
+    <div class="ops-page-heading">
+        <div><span class="ops-page-kicker">DISPATCH OVERVIEW</span><h1>Operations overview</h1><p>Monitor incoming calls, response activity and field resources.</p></div>
+    </div>
 
     @if ($preview)
         <div class="notice"><span class="notice-icon">i</span><div><strong>Sign in to view operations</strong><p>Live dashboard data is restricted to authorized accounts.</p></div><a class="button button-primary button-small" href="{{ route('login') }}">Sign in</a></div>
@@ -31,10 +33,13 @@
     <div class="ops-primary-grid">
         <section class="ops-panel ops-map-panel">
             <div class="ops-panel-heading">
-                <div><h2><span class="ops-pin">⌖</span> Incident & station map</h2><p>Locations from saved records · Not live GPS</p></div>
+                <div><h2><span class="ops-pin">⌖</span> Incident &amp; station map</h2><p>Saved coordinates · Schematic view, not live GPS</p></div>
+                @if (auth()->user()?->hasPermission('gps.view'))
+                    <a class="ops-map-action" href="{{ route('app.tracking') }}">Open live tracking <span aria-hidden="true">→</span></a>
+                @endif
                 <div class="ops-map-legend"><span><i class="legend-fire"></i> Incident</span><span><i class="legend-station"></i> Station</span><span><i class="legend-unit"></i> Vehicle</span></div>
             </div>
-            <div class="ops-map" role="img" aria-label="Illustrative map of saved station and incident coordinates">
+            <div class="ops-map" role="group" aria-label="Schematic map of saved station, incident and vehicle coordinates">
                 <div class="map-park map-park-one"></div><div class="map-park map-park-two"></div>
                 <div class="map-river"></div>
                 <span class="map-road road-one"></span><span class="map-road road-two"></span><span class="map-road road-three"></span>
@@ -42,13 +47,13 @@
                 <span class="map-road road-seven"></span><span class="map-road road-eight"></span><span class="map-road road-nine"></span>
                 <div class="map-city-label">Vadodara</div>
                 @forelse ($mapMarkers as $marker)
-                    <span class="map-marker map-marker-{{ $marker['kind'] }}" style="left: {{ $marker['x'] }}%; top: {{ $marker['y'] }}%" title="{{ $marker['label'] }}" aria-label="{{ ucfirst($marker['kind']) }}: {{ $marker['label'] }}">
+                    <span class="map-marker map-marker-{{ $marker['kind'] }}" style="left: {{ $marker['x'] }}%; top: {{ $marker['y'] }}%" title="{{ ucfirst($marker['kind']) }}: {{ $marker['label'] }}" role="img" aria-label="{{ ucfirst($marker['kind']) }}: {{ $marker['label'] }}">
                         {{ $marker['kind'] === 'incident' ? '!' : ($marker['kind'] === 'station' ? '⌂' : '▰') }}
                     </span>
                 @empty
-                    <div class="map-empty">{{ $preview ? 'Sign in to view authorized locations' : 'No coordinates are available in your access scope' }}</div>
+                    <div class="map-empty" role="status">{{ $preview ? 'Sign in to view authorized locations' : 'No coordinates are available in your access scope' }}</div>
                 @endforelse
-                <span class="map-scale">Illustrative demo map · Not live GPS</span>
+                <span class="map-scale">Schematic view · Not live GPS</span>
             </div>
         </section>
 
@@ -72,21 +77,29 @@
             </section>
 
             <section class="ops-panel ops-recent-panel">
-                <div class="ops-panel-heading"><div><h2>Recent incidents</h2><p>Latest calls visible to your account</p></div><a href="{{ route('app.jobs') }}">View all →</a></div>
-                @if ($recentJobs->isEmpty())
-                    <p class="ops-empty">{{ $preview ? 'Sign in to view incidents.' : 'No incidents in your access scope.' }}</p>
-                @else
-                    <div class="ops-recent-list">
-                        @foreach ($recentJobs->take(5) as $job)
-                            <a class="ops-recent-row" href="{{ route('app.jobs') }}">
-                                <span class="incident-type-icon {{ $job->incident_type === 'STRUCTURE_FIRE' ? 'incident-fire' : 'incident-other' }}">{{ $job->incident_type === 'STRUCTURE_FIRE' ? '♨' : '✚' }}</span>
-                                <span class="ops-recent-copy"><strong>{{ $job->job_id }}</strong><small>{{ $job->ward?->name ?? $job->incident_type }}</small></span>
-                                <time>{{ $job->occurred_at->format('H:i') }}</time>
-                                <span class="ops-status status-{{ strtolower($job->status) }}">{{ str_replace('_', ' ', $job->status) }}</span>
+                <div class="ops-panel-heading"><div><h2>Incoming calls &amp; new jobs</h2><p>Automatically rotating · updates every 15 seconds</p></div><a href="{{ route('app.jobs') }}">View all →</a></div>
+                <div class="ops-activity-carousel" data-activity-carousel data-feed-url="{{ route('dashboard.activity') }}" aria-label="Recent incoming calls and new jobs" aria-roledescription="carousel">
+                    <p class="ops-activity-refresh-status" data-activity-status role="status" aria-live="polite" hidden></p>
+                    <div class="ops-activity-slides" data-activity-slides aria-live="polite">
+                        @forelse ($activityItems as $item)
+                            <a class="ops-activity-slide" data-activity-item="{{ $item['key'] }}" href="{{ $item['url'] }}" @if (!$loop->first) hidden @endif>
+                                <div class="ops-activity-topline"><span class="ops-activity-kind {{ $item['type'] === 'NEW CALL' ? 'is-call' : 'is-job' }}">{{ $item['type'] }}</span><time datetime="{{ $item['time'] }}">{{ \Illuminate\Support\Carbon::parse($item['time'])->format('M j · H:i:s') }}</time></div>
+                                <strong class="ops-activity-job">{{ $item['job_id'] }}</strong>
+                                <span class="ops-activity-caller">{{ $item['society'] }} · {{ $item['caller'] }} · {{ $item['phone'] }}</span>
+                                <span class="ops-activity-description">{{ $item['incident'] }} · {{ str_replace('_', ' ', $item['priority']) }} severity</span>
+                                <span class="ops-activity-status">{{ $item['status'] }}</span>
+                                @if (!empty($item['remarks']))<span class="ops-activity-description">{{ $item['remarks'] }}</span>@endif
                             </a>
-                        @endforeach
+                        @empty
+                            <p class="ops-empty" data-activity-empty>{{ $preview ? 'Sign in to view incoming calls.' : 'No recent calls or jobs in your access scope.' }}</p>
+                        @endforelse
                     </div>
-                @endif
+                    <div class="ops-activity-controls" data-activity-controls @if ($activityItems->isEmpty()) hidden @endif>
+                        <button class="ops-activity-arrow" type="button" data-activity-previous aria-label="Previous activity">‹</button>
+                        <span data-activity-count aria-live="polite">{{ $activityItems->isEmpty() ? '0 / 0' : '1 / '.$activityItems->count() }}</span>
+                        <button class="ops-activity-arrow" type="button" data-activity-next aria-label="Next activity">›</button>
+                    </div>
+                </div>
             </section>
         </div>
     </div>
@@ -169,4 +182,121 @@
         @if (auth()->user()?->hasPermission('vehicles.view'))<a href="{{ route('app.vehicles') }}">Vehicle directory →</a>@endif
     </footer>
 </section>
+@if ($canViewJobs)
+<script>
+(() => {
+    const carousel = document.querySelector('[data-activity-carousel]');
+    if (!carousel) return;
+
+    const slides = carousel.querySelector('[data-activity-slides]');
+    const controls = carousel.querySelector('[data-activity-controls]');
+    const count = carousel.querySelector('[data-activity-count]');
+    const status = carousel.querySelector('[data-activity-status]');
+    let items = [...slides.querySelectorAll('[data-activity-item]')];
+    let current = 0;
+    let isRefreshing = false;
+
+    const show = (index) => {
+        if (!items.length) return;
+        current = (index + items.length) % items.length;
+        items.forEach((item, itemIndex) => { item.hidden = itemIndex !== current; });
+        controls.hidden = items.length < 2;
+        count.textContent = `${current + 1} / ${items.length}`;
+    };
+
+    const makeSlide = (activity) => {
+        const link = document.createElement('a');
+        link.className = 'ops-activity-slide';
+        link.dataset.activityItem = activity.key;
+        link.href = activity.url;
+
+        const top = document.createElement('div');
+        top.className = 'ops-activity-topline';
+        const kind = document.createElement('span');
+        kind.className = `ops-activity-kind ${activity.type === 'NEW CALL' ? 'is-call' : 'is-job'}`;
+        kind.textContent = activity.type;
+        const time = document.createElement('time');
+        time.dateTime = activity.time;
+        time.textContent = new Date(activity.time).toLocaleString([], {month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'});
+        top.append(kind, time);
+
+        const fields = [
+            ['strong', 'ops-activity-job', activity.job_id],
+            ['span', 'ops-activity-caller', `${activity.society} · ${activity.caller} · ${activity.phone}`],
+            ['span', 'ops-activity-description', `${activity.incident} · ${activity.priority.replaceAll('_', ' ')} severity`],
+            ['span', 'ops-activity-status', activity.status],
+        ];
+        link.append(top);
+        fields.forEach(([tag, className, value]) => {
+            const element = document.createElement(tag);
+            element.className = className;
+            element.textContent = value;
+            link.append(element);
+        });
+        if (activity.remarks) {
+            const remarks = document.createElement('span');
+            remarks.className = 'ops-activity-description';
+            remarks.textContent = activity.remarks;
+            link.append(remarks);
+        }
+        return link;
+    };
+
+    const refresh = async () => {
+        if (isRefreshing) return;
+        isRefreshing = true;
+        status.textContent = 'Refreshing recent activity…';
+        status.hidden = false;
+        carousel.setAttribute('aria-busy', 'true');
+        try {
+            const response = await fetch(carousel.dataset.feedUrl, {headers: {'Accept': 'application/json'}, credentials: 'same-origin'});
+            if (!response.ok) throw new Error(`Activity refresh failed: ${response.status}`);
+            const payload = await response.json();
+            const activeKey = items[current]?.dataset.activityItem;
+            items = payload.data.map(makeSlide);
+            slides.replaceChildren(...items);
+
+            if (!items.length) {
+                const empty = document.createElement('p');
+                empty.className = 'ops-empty';
+                empty.textContent = 'No recent calls or jobs in your access scope.';
+                slides.append(empty);
+                controls.hidden = true;
+                status.hidden = true;
+                return;
+            }
+
+            const activeIndex = items.findIndex((item) => item.dataset.activityItem === activeKey);
+            show(activeIndex >= 0 ? activeIndex : 0);
+            status.hidden = true;
+        } finally {
+            isRefreshing = false;
+            carousel.setAttribute('aria-busy', 'false');
+        }
+    };
+
+    const reportRefreshError = (error) => {
+        status.textContent = 'Live updates are unavailable. Showing the most recent activity.';
+        status.hidden = false;
+        console.error(error);
+    };
+
+    carousel.querySelector('[data-activity-previous]').addEventListener('click', () => show(current - 1));
+    carousel.querySelector('[data-activity-next]').addEventListener('click', () => show(current + 1));
+    show(0);
+    refresh().catch(reportRefreshError);
+
+    window.setInterval(() => {
+        if (document.visibilityState === 'visible' && !carousel.matches(':hover') && !carousel.contains(document.activeElement)) {
+            show(current + 1);
+        }
+    }, 6000);
+    window.setInterval(() => {
+        if (document.visibilityState === 'visible') {
+            refresh().catch(reportRefreshError);
+        }
+    }, 15000);
+})();
+</script>
+@endif
 @endsection

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\ApplySecurityHeaders;
 use App\Http\Middleware\EnsureUserHasPermission;
 use App\Http\Middleware\EnsureUserIsActive;
 use Illuminate\Foundation\Application;
@@ -15,8 +16,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->append(ApplySecurityHeaders::class);
         $middleware->appendToGroup('web', EnsureUserIsActive::class);
         $middleware->alias([
+            'active' => EnsureUserIsActive::class,
             'permission' => EnsureUserHasPermission::class,
         ]);
         $middleware->redirectGuestsTo(

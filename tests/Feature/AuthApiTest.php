@@ -111,4 +111,62 @@ class AuthApiTest extends TestCase
             ->assertUnauthorized()
             ->assertJsonPath('message', 'Unauthenticated.');
     }
+
+    public function test_api_requests_reject_and_revoke_tokens_for_deactivated_accounts(): void
+    {
+        $user = User::factory()->create();
+        $token = $user->createToken('test-device')->plainTextToken;
+        $user->forceFill(['is_active' => false])->save();
+
+        $this->withToken($token)
+            ->getJson('/api/v1/auth/me')
+            ->assertUnauthorized()
+            ->assertJsonPath('message', 'Unauthenticated.');
+
+        $this->assertDatabaseCount('personal_access_tokens', 0);
+    }
+
+    public function test_login_throttle_limits_repeated_attempts_for_an_account(): void
+    {
+        for ($attempt = 0; $attempt < 5; $attempt++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => 'unknown@example.com',
+                'password' => 'incorrect-password',
+            ])->assertUnprocessable();
+        }
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'unknown@example.com',
+            'password' => 'incorrect-password',
+        ])->assertTooManyRequests();
+    }
+
+    public function test_login_throttle_limits_password_spraying_across_account_names(): void
+    {
+        for ($attempt = 0; $attempt < 60; $attempt++) {
+            $this->postJson('/api/v1/auth/login', [
+                'email' => 'spray-'.$attempt.'@example.com',
+                'password' => 'incorrect-password',
+            ])->assertUnprocessable();
+        }
+
+        $this->postJson('/api/v1/auth/login', [
+            'email' => 'another-account@example.com',
+            'password' => 'incorrect-password',
+        ])->assertTooManyRequests();
+    }
+
+    public function test_security_headers_are_added_and_hsts_is_limited_to_https(): void
+    {
+        $this->get('/')
+            ->assertOk()
+            ->assertHeader('X-Content-Type-Options', 'nosniff')
+            ->assertHeader('X-Frame-Options', 'DENY')
+            ->assertHeader('Referrer-Policy', 'strict-origin-when-cross-origin')
+            ->assertHeaderMissing('Strict-Transport-Security');
+
+        $this->get('https://localhost/')
+            ->assertOk()
+            ->assertHeader('Strict-Transport-Security', 'max-age=31536000');
+    }
 }
