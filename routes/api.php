@@ -4,6 +4,7 @@ use App\Http\Controllers\Api\V1\AuthController;
 use App\Http\Controllers\Api\V1\CatalogController;
 use App\Http\Controllers\Api\V1\CatalogMutationController;
 use App\Http\Controllers\Api\V1\DashboardController;
+use App\Http\Controllers\Api\V1\FleetController;
 use App\Http\Controllers\Api\V1\IncidentArchiveController;
 use App\Http\Controllers\Api\V1\IncidentController;
 use App\Http\Controllers\Api\V1\OperationsReportController;
@@ -17,6 +18,12 @@ Route::prefix('v1')->group(function (): void {
     Route::middleware(['auth:sanctum', 'active'])->group(function (): void {
         Route::get('/auth/me', [AuthController::class, 'show']);
         Route::post('/auth/logout', [AuthController::class, 'destroy']);
+
+        Route::get('/fleet/assignments', [FleetController::class, 'assignments']);
+        Route::get('/fleet/vehicles', [FleetController::class, 'vehicles']);
+        Route::get('/fleet/notifications', [FleetController::class, 'notifications']);
+        Route::patch('/fleet/notifications/{notificationId}/read', [FleetController::class, 'markNotificationRead'])
+            ->whereUuid('notificationId');
 
         Route::get('/dashboard', DashboardController::class)
             ->middleware('permission:dashboard.view');

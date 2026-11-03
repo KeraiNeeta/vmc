@@ -45,6 +45,17 @@ class IncidentController extends Controller
     {
         $queues = [
             'pending' => ['Pending incidents', [EmergencyJob::STATUS_RECEIVED, EmergencyJob::STATUS_ASSIGNED]],
+            'active' => ['Active incidents', [
+                EmergencyJob::STATUS_ASSIGNED,
+                EmergencyJob::STATUS_EN_ROUTE,
+                EmergencyJob::STATUS_ARRIVED,
+                EmergencyJob::STATUS_IN_PROGRESS,
+            ]],
+            'assigned' => ['Assigned incidents', [EmergencyJob::STATUS_ASSIGNED]],
+            'en-route' => ['Units en route', [EmergencyJob::STATUS_EN_ROUTE]],
+            'arrived' => ['Units arrived', [EmergencyJob::STATUS_ARRIVED]],
+            'in-progress' => ['Incidents in progress', [EmergencyJob::STATUS_IN_PROGRESS]],
+            'completed' => ['Completed incidents', [EmergencyJob::STATUS_COMPLETED]],
             'duplicates' => ['Duplicate incidents', [EmergencyJob::STATUS_DUPLICATE]],
             'transferred' => ['Transferred to 112', [EmergencyJob::STATUS_TRANSFERRED_TO_112]],
         ];

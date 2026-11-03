@@ -195,6 +195,8 @@ class MasterDataManagementTest extends TestCase
         $this->get('/vehicles')
             ->assertOk()
             ->assertSee('WEB-VEHICLE-01')
+            ->assertSee('page-heading-actions', false)
+            ->assertSee('+ Add vehicle')
             ->assertSee(route('app.vehicles.edit', $vehicle->id));
         $this->get(route('app.vehicles.edit', $vehicle->id))
             ->assertOk()

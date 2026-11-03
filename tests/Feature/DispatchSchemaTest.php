@@ -10,6 +10,7 @@ use App\Models\Vehicle;
 use Database\Seeders\DemoDispatchSeeder;
 use Database\Seeders\RbacSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -63,6 +64,20 @@ class DispatchSchemaTest extends TestCase
         $this->assertSame('DEMO-FIRE-01', $activeJob->assignments->first()->vehicle->vehicle_number);
         $this->assertSame('Central Response Team', $activeJob->assignments->first()->team->name);
         $this->assertCount(3, $activeJob->statusHistory);
+        $this->assertSame('Central Demo Residency', $activeJob->society_name);
+        $this->assertStringContainsString('DEMO DRILL', $activeJob->remarks);
+        $this->assertTrue($activeJob->occurred_at->between(now()->subMinutes(15), now()));
+        $this->assertTrue(
+            $activeJob->assignments->first()->gpsLogs()->latest('recorded_at')->firstOrFail()
+                ->recorded_at->between(now()->subMinutes(3), now()),
+        );
+        $notification = json_decode(
+            DB::table('notifications')->where('id', 'd3cfe234-c0ba-5b58-a5bc-cd2946598731')->value('data'),
+            true,
+            flags: JSON_THROW_ON_ERROR,
+        );
+        $this->assertSame('dispatch.assigned', $notification['event']);
+        $this->assertSame($activeJob->assignments->first()->id, $notification['assignment_id']);
 
         $transferredJob = EmergencyJob::query()
             ->where('job_id', 'VMC-DEMO-0003')

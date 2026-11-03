@@ -32,6 +32,8 @@ class UserManagementTest extends TestCase
         $this->actingAs($stationAdmin)
             ->get(route('users.index'))
             ->assertOk()
+            ->assertSee('page-heading-actions', false)
+            ->assertSee('+ Add user')
             ->assertSee($staff->name)
             ->assertSee(route('users.edit', $staff));
     }

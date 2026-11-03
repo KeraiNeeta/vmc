@@ -14,6 +14,12 @@ Laravel 12 application and REST API foundation for a multi-station fire brigade 
 - Hierarchical user administration assigns roles and stations only within the manager's scope, records account changes, and revokes tokens when an account is disabled.
 - Automated auth, RBAC, and station-scope tests.
 
+### Phase 2 implementation
+
+- Manage stations, wards, vehicles, teams, and team membership through permission-protected, station-scoped directories and validated create, update, and archive workflows.
+- Protect operationally referenced records from unsafe archival, and record master-data changes in the audit log.
+- Search and paginate directories while enforcing each user's station access.
+
 ### Phase 3 implementation
 
 - Register incidents with a generated public job ID, validated caller/location details, an initial call log, and an append-only received-status history entry.
@@ -31,6 +37,7 @@ Laravel 12 application and REST API foundation for a multi-station fire brigade 
 - Track each unit through `ASSIGNED → EN_ROUTE → ARRIVED → IN_PROGRESS → COMPLETED`; reject skipped or invalid transitions and capture optional notes and coordinates.
 - Update vehicle/team availability on dispatch and release, derive the incident's aggregate status from all assignments, and audit each dispatch/status change.
 - Vehicle drivers can update only assignments for their assigned team leader or active team membership; station membership alone does not grant driver access to other units.
+- Active, assigned, en-route, arrived, in-progress, and completed job queues show live, station-scoped incident records.
 - Incident detail page shows active assignments, per-unit status controls, resource selection, and a timeline identifying which vehicle produced each status event.
 - Authenticated API endpoints: `POST /api/v1/jobs/{id}/assignments` and `PATCH /api/v1/jobs/{id}/assignments/{assignmentId}/status`.
 
@@ -66,6 +73,7 @@ Laravel 12 application and REST API foundation for a multi-station fire brigade 
 ### Production deployment checklist
 
 - Set `APP_ENV=production`, `APP_DEBUG=false`, a unique secret `APP_KEY`, and an HTTPS `APP_URL`; configure trusted proxies and hosts for the actual reverse-proxy topology.
+- The application defaults to `Asia/Kolkata` for Vadodara operations; set `APP_TIMEZONE` explicitly if deploying to a different operating timezone.
 - Set `SESSION_SECURE_COOKIE=true`, keep `SESSION_HTTP_ONLY=true` and `SESSION_SAME_SITE=lax`, and use a strong private PostgreSQL credential with network access restricted to the application.
 - Require PHP 8.2+ with `pdo_pgsql`, `gd`, and `zip`; run `composer install --no-dev --prefer-dist --optimize-autoloader` and `php artisan migrate --force`.
 - Run `composer audit` during release preparation and update affected dependencies before deployment.
@@ -158,7 +166,7 @@ php artisan db:seed --class=RbacSeeder
 php artisan db:seed --class=DemoDispatchSeeder
 ```
 
-The demo seeder runs only in local/testing environments and is repeatable. It creates sample vehicles, response teams, a team membership, three incidents in received/en-route/transferred states, call logs, an assignment, status history, a remark, a GPS point, a 112 handoff reference, and a notification. All incident and location details are fictional. Demo accounts use `example.test` emails with randomly generated, undisclosed passwords. Sign in as a securely configured super administrator and set individual demo passwords from User management before testing those accounts. Demo account emails are `control.room@example.test`, `central.admin@example.test`, `north.admin@example.test`, `central.dispatch@example.test`, `north.dispatch@example.test`, `vehicle.driver@example.test`, `team.member@example.test`, and `report.viewer@example.test`.
+The demo seeder runs only in local/testing environments and is repeatable. It creates sample vehicles, response teams, a team membership, three incidents in received/en-route/transferred states, call logs, an assignment, status history, a remark, a GPS point, a 112 handoff reference, and a notification. Re-running it refreshes the sample incident, status-history, notification, and GPS timestamps so the dashboard ticker and mobile flow can be exercised with recent records. All records are explicitly marked as fictional demo drills and are not real emergency data. Demo accounts use `example.test` emails with randomly generated, undisclosed passwords. Sign in as a securely configured super administrator and set individual demo passwords from User management before testing those accounts. Demo account emails are `control.room@example.test`, `central.admin@example.test`, `north.admin@example.test`, `central.dispatch@example.test`, `north.dispatch@example.test`, `vehicle.driver@example.test`, `team.member@example.test`, and `report.viewer@example.test`.
 
 ### Authentication API
 

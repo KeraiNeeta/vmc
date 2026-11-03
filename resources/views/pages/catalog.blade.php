@@ -6,13 +6,15 @@
 <section class="page-stack">
     <div class="page-heading">
         <div><span class="eyebrow">{{ strtoupper($kind === 'roles' ? 'ACCESS CONTROL' : ($kind === 'users' ? 'ADMINISTRATION' : 'FIELD OPERATIONS')) }}</span><h1>{{ $title }}</h1><p class="muted">Permission-scoped directory of live database records.</p></div>
-        @if ($canManage && in_array($kind, ['stations', 'wards', 'vehicles', 'teams'], true))
-            <a class="button button-primary" href="{{ route('app.'.$kind.'.create') }}">+ Add {{ strtolower(match ($kind) { 'stations' => 'station', 'wards' => 'ward', 'vehicles' => 'vehicle', default => 'team' }) }}</a>
-        @endif
-        @if ($kind === 'jobs' && $canCreate)
-            <a class="button button-primary" href="{{ route('app.jobs.new') }}">+ Register incident</a>
-        @endif
-        @if ($records) <span class="record-count"><strong>{{ number_format($records->total()) }}</strong> records</span> @endif
+        <div class="page-heading-actions">
+            @if ($records) <span class="record-count"><strong>{{ number_format($records->total()) }}</strong> records</span> @endif
+            @if ($canManage && in_array($kind, ['stations', 'wards', 'vehicles', 'teams'], true))
+                <a class="button button-primary" href="{{ route('app.'.$kind.'.create') }}">+ Add {{ strtolower(match ($kind) { 'stations' => 'station', 'wards' => 'ward', 'vehicles' => 'vehicle', default => 'team' }) }}</a>
+            @endif
+            @if ($kind === 'jobs' && $canCreate)
+                <a class="button button-primary" href="{{ route('app.jobs.new') }}">+ Register incident</a>
+            @endif
+        </div>
     </div>
     @unless (auth()->user())
         <div class="notice"><span class="notice-icon">i</span><div><strong>Sign in to load live records.</strong><p>Directory access is restricted to your authorized operational scope.</p></div><a class="button button-light button-small" href="{{ route('login') }}">Sign in →</a></div>

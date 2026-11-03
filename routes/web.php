@@ -65,7 +65,7 @@ Route::middleware(['auth', 'permission:jobs.create'])->group(function (): void {
     Route::get('/jobs/new', [IncidentController::class, 'create'])->name('app.jobs.new');
     Route::post('/jobs', [IncidentController::class, 'store'])->name('app.jobs.store');
 });
-foreach (['pending', 'duplicates', 'transferred'] as $queue) {
+foreach (['pending', 'active', 'assigned', 'en-route', 'arrived', 'in-progress', 'completed', 'duplicates', 'transferred'] as $queue) {
     Route::get('/jobs/'.$queue, [IncidentController::class, 'queue'])
         ->defaults('state', $queue)
         ->middleware(['auth', 'permission:jobs.view'])
@@ -118,19 +118,4 @@ foreach (['stations', 'wards', 'roles', 'vehicles', 'teams', 'jobs'] as $catalog
     Route::get('/'.$catalog, [PageController::class, 'catalog'])
         ->defaults('kind', $catalog)
         ->name('app.'.$catalog);
-}
-
-foreach ([
-    'jobs/active',
-    'jobs/scheduled',
-    'jobs/assigned',
-    'jobs/en-route',
-    'jobs/arrived',
-    'jobs/in-progress',
-    'jobs/completed',
-    'settings',
-] as $page) {
-    Route::get('/'.$page, [PageController::class, 'module'])
-        ->defaults('page', $page)
-        ->name('app.'.str_replace('/', '.', $page));
 }

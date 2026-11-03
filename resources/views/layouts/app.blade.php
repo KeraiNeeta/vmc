@@ -28,6 +28,11 @@
             ['label' => 'Duplicate calls', 'route' => 'app.jobs.duplicates', 'permission' => 'jobs.view', 'icon' => '↔'],
             ['label' => 'Transferred to 112', 'route' => 'app.jobs.transferred', 'permission' => 'jobs.view', 'icon' => '⇢'],
             ['label' => 'Active jobs', 'route' => 'app.jobs.active', 'permission' => 'jobs.view', 'icon' => '◉'],
+            ['label' => 'Assigned jobs', 'route' => 'app.jobs.assigned', 'permission' => 'jobs.view', 'icon' => '▣'],
+            ['label' => 'En route', 'route' => 'app.jobs.en-route', 'permission' => 'jobs.view', 'icon' => '➤'],
+            ['label' => 'Arrived', 'route' => 'app.jobs.arrived', 'permission' => 'jobs.view', 'icon' => '⌖'],
+            ['label' => 'In progress', 'route' => 'app.jobs.in-progress', 'permission' => 'jobs.view', 'icon' => '◷'],
+            ['label' => 'Completed', 'route' => 'app.jobs.completed', 'permission' => 'jobs.view', 'icon' => '✓'],
             ['label' => 'Incident archive', 'route' => 'app.archive', 'permission' => 'jobs.archive', 'icon' => '▣'],
         ]],
         ['section' => 'Field operations', 'links' => [
@@ -41,7 +46,6 @@
             ['label' => 'Reports & analytics', 'route' => 'app.reports', 'permission' => 'reports.view', 'icon' => '▥'],
             ['label' => 'User management', 'route' => 'users.index', 'permission' => 'users.view', 'icon' => '♙'],
             ['label' => 'Roles & permissions', 'route' => 'app.roles', 'permission' => 'roles.view', 'icon' => '◇'],
-            ['label' => 'System settings', 'route' => 'app.settings', 'permission' => 'settings.manage', 'icon' => '⚙'],
         ]],
     ];
 @endphp

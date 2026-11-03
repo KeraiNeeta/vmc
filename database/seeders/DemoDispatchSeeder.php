@@ -226,7 +226,13 @@ class DemoDispatchSeeder extends Seeder
             ],
         ]);
 
-        $today = now()->startOfDay();
+        $now = now();
+        $activeOccurredAt = $now->copy()->subMinutes(14);
+        $pendingOccurredAt = $now->copy()->subMinutes(4);
+        $transferredOccurredAt = $now->copy()->subHours(2);
+        $assignmentAt = $activeOccurredAt->copy()->addMinutes(5);
+        $enRouteAt = $activeOccurredAt->copy()->addMinutes(7);
+        $gpsAt = $now->copy()->subMinutes(2);
         $activeJob = EmergencyJob::withTrashed()->updateOrCreate(
             ['job_id' => 'VMC-DEMO-0001'],
             [
@@ -235,16 +241,18 @@ class DemoDispatchSeeder extends Seeder
                 'call_source' => 'PHONE',
                 'incident_type' => 'STRUCTURE_FIRE',
                 'priority' => 'HIGH',
-                'occurred_at' => $today->copy()->addHours(9),
+                'occurred_at' => $activeOccurredAt,
                 'ward_id' => $centralWard->id,
+                'society_name' => 'Central Demo Residency',
                 'incident_address' => '12 Sample Street, Central Ward, Vadodara',
                 'latitude' => 22.3090000,
                 'longitude' => 73.1830000,
-                'remarks' => 'Smoke reported from a residential building.',
+                'remarks' => 'DEMO DRILL: Smoke reported from a residential building.',
                 'status' => EmergencyJob::STATUS_EN_ROUTE,
                 'created_by' => $centralDispatcher->id,
             ],
         );
+        $activeJob->restore();
         $pendingJob = EmergencyJob::withTrashed()->updateOrCreate(
             ['job_id' => 'VMC-DEMO-0002'],
             [
@@ -253,16 +261,18 @@ class DemoDispatchSeeder extends Seeder
                 'call_source' => 'PHONE',
                 'incident_type' => 'ROAD_ACCIDENT',
                 'priority' => 'NORMAL',
-                'occurred_at' => $today->copy()->addHours(10),
+                'occurred_at' => $pendingOccurredAt,
                 'ward_id' => $riverWard->id,
+                'society_name' => 'Riverside Demo Housing',
                 'incident_address' => '24 Riverside Avenue, River Ward, Vadodara',
                 'latitude' => 22.3335000,
                 'longitude' => 73.1990000,
-                'remarks' => 'One vehicle reported off the road.',
+                'remarks' => 'DEMO DRILL: One vehicle reported off the road.',
                 'status' => EmergencyJob::STATUS_RECEIVED,
                 'created_by' => $northDispatcher->id,
             ],
         );
+        $pendingJob->restore();
         $transferredJob = EmergencyJob::withTrashed()->updateOrCreate(
             ['job_id' => 'VMC-DEMO-0003'],
             [
@@ -271,16 +281,18 @@ class DemoDispatchSeeder extends Seeder
                 'call_source' => 'PHONE',
                 'incident_type' => 'MEDICAL_EMERGENCY',
                 'priority' => 'HIGH',
-                'occurred_at' => $today->copy()->addHours(8),
+                'occurred_at' => $transferredOccurredAt,
                 'ward_id' => $marketWard->id,
+                'society_name' => 'Market Demo Complex',
                 'incident_address' => '8 Market Road, Market Ward, Vadodara',
                 'latitude' => 22.3020000,
                 'longitude' => 73.1860000,
-                'remarks' => 'Transferred to the central emergency service.',
+                'remarks' => 'DEMO DRILL: Transferred to the central emergency service.',
                 'status' => EmergencyJob::STATUS_TRANSFERRED_TO_112,
                 'created_by' => $centralDispatcher->id,
             ],
         );
+        $transferredJob->restore();
 
         foreach ([
             [$activeJob, 'DEMO-CALL-0001', 'Caller reports a residential fire.'],
@@ -308,7 +320,7 @@ class DemoDispatchSeeder extends Seeder
                 'team_id' => $centralTeam->id,
                 'team_leader_user_id' => $centralDriver->id,
                 'assigned_by' => $centralDispatcher->id,
-                'assigned_at' => $today->copy()->addHours(9)->addMinutes(5),
+                'assigned_at' => $assignmentAt,
                 'released_at' => null,
                 'status' => EmergencyJob::STATUS_EN_ROUTE,
                 'remarks' => 'Central response team dispatched.',
@@ -317,23 +329,23 @@ class DemoDispatchSeeder extends Seeder
         );
 
         foreach ([
-            [$activeJob, null, null, EmergencyJob::STATUS_RECEIVED, $today->copy()->addHours(9), 'Call received.'],
-            [$activeJob, $assignment, EmergencyJob::STATUS_RECEIVED, EmergencyJob::STATUS_ASSIGNED, $today->copy()->addHours(9)->addMinutes(5), 'Vehicle and team assigned.'],
-            [$activeJob, $assignment, EmergencyJob::STATUS_ASSIGNED, EmergencyJob::STATUS_EN_ROUTE, $today->copy()->addHours(9)->addMinutes(12), 'Team is en route.'],
-            [$pendingJob, null, null, EmergencyJob::STATUS_RECEIVED, $today->copy()->addHours(10), 'Call received; awaiting dispatch.'],
-            [$transferredJob, null, null, EmergencyJob::STATUS_RECEIVED, $today->copy()->addHours(8), 'Call received.'],
-            [$transferredJob, null, EmergencyJob::STATUS_RECEIVED, EmergencyJob::STATUS_TRANSFERRED_TO_112, $today->copy()->addHours(8)->addMinutes(7), 'Transferred to external emergency service.'],
+            [$activeJob, null, null, EmergencyJob::STATUS_RECEIVED, $activeOccurredAt, 'DEMO DRILL: Call received.'],
+            [$activeJob, $assignment, EmergencyJob::STATUS_RECEIVED, EmergencyJob::STATUS_ASSIGNED, $assignmentAt, 'DEMO DRILL: Vehicle and team assigned.'],
+            [$activeJob, $assignment, EmergencyJob::STATUS_ASSIGNED, EmergencyJob::STATUS_EN_ROUTE, $enRouteAt, 'DEMO DRILL: Team is en route.'],
+            [$pendingJob, null, null, EmergencyJob::STATUS_RECEIVED, $pendingOccurredAt, 'DEMO DRILL: Call received; awaiting dispatch.'],
+            [$transferredJob, null, null, EmergencyJob::STATUS_RECEIVED, $transferredOccurredAt, 'DEMO DRILL: Call received.'],
+            [$transferredJob, null, EmergencyJob::STATUS_RECEIVED, EmergencyJob::STATUS_TRANSFERRED_TO_112, $transferredOccurredAt->copy()->addMinutes(7), 'DEMO DRILL: Transferred to external emergency service.'],
         ] as [$job, $eventAssignment, $previous, $next, $changedAt, $remarks]) {
             JobStatusHistory::query()->updateOrCreate(
                 [
                     'emergency_job_id' => $job->id,
+                    'job_assignment_id' => $eventAssignment?->id,
                     'new_status' => $next,
-                    'changed_at' => $changedAt,
                 ],
                 [
-                    'job_assignment_id' => $eventAssignment?->id,
                     'previous_status' => $previous,
                     'changed_by' => $job->created_by,
+                    'changed_at' => $changedAt,
                     'remarks' => $remarks,
                     'latitude' => $job->latitude,
                     'longitude' => $job->longitude,
@@ -349,12 +361,12 @@ class DemoDispatchSeeder extends Seeder
             [
                 'vehicle_id' => $centralVehicle->id,
                 'job_assignment_id' => $assignment->id,
-                'recorded_at' => $today->copy()->addHours(9)->addMinutes(15),
+                'speed_kph' => 34.50,
             ],
             [
                 'latitude' => 22.3100000,
                 'longitude' => 73.1840000,
-                'speed_kph' => 34.50,
+                'recorded_at' => $gpsAt,
             ],
         );
         JobExternalReference::query()->updateOrCreate(
@@ -362,8 +374,8 @@ class DemoDispatchSeeder extends Seeder
             [
                 'emergency_job_id' => $transferredJob->id,
                 'details' => 'Sample handoff reference; not connected to a live emergency service.',
-                'transferred_at' => $today->copy()->addHours(8)->addMinutes(7),
-                'confirmed_at' => $today->copy()->addHours(8)->addMinutes(9),
+                'transferred_at' => $transferredOccurredAt->copy()->addMinutes(7),
+                'confirmed_at' => $transferredOccurredAt->copy()->addMinutes(9),
                 'created_by' => $centralDispatcher->id,
             ],
         );
@@ -375,11 +387,23 @@ class DemoDispatchSeeder extends Seeder
                 'notifiable_type' => User::class,
                 'notifiable_id' => $centralDriver->id,
                 'data' => json_encode([
+                    'event' => 'dispatch.assigned',
+                    'assignment_id' => $assignment->id,
                     'job_id' => $activeJob->job_id,
-                    'message' => 'A demo dispatch has been assigned.',
+                    'incident_type' => $activeJob->incident_type,
+                    'priority' => $activeJob->priority,
+                    'caller_name' => $activeJob->caller_name,
+                    'caller_phone' => $activeJob->caller_phone,
+                    'society_name' => $activeJob->society_name,
+                    'incident_address' => $activeJob->incident_address,
+                    'fire_station' => $central->name,
+                    'vehicle_number' => $centralVehicle->vehicle_number,
+                    'message' => 'DEMO DRILL: A sample response assignment is ready.',
+                    'assigned_at' => $assignment->assigned_at?->toIso8601String(),
                 ], JSON_THROW_ON_ERROR),
                 'read_at' => null,
-                'created_at' => $today->copy()->addHours(9)->addMinutes(5),
+                'created_at' => $assignmentAt,
+                'updated_at' => $assignmentAt,
             ],
         );
     }

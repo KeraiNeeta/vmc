@@ -191,9 +191,64 @@ class ServerRenderedPagesTest extends TestCase
 
         $this->get('/dashboard')
             ->assertOk()
-            ->assertSee('Incident & station map', false)
+            ->assertSee('Incident & station map')
             ->assertSee('OPS-JOB-CENTRAL')
             ->assertDontSee('OPS-JOB-NORTH');
+    }
+
+    public function test_phase_four_status_queues_show_the_matching_station_scoped_incidents(): void
+    {
+        $stationAdmin = User::factory()->create();
+        $stationAdmin->roles()->attach(Role::query()->where('code', 'FIRE_STATION_ADMIN')->value('id'));
+        $station = FireStation::query()->create([
+            'code' => 'FS-QUEUE',
+            'name' => 'Queue Test Station',
+            'address' => '1 Main Street',
+            'admin_user_id' => $stationAdmin->id,
+        ]);
+        $ward = Ward::query()->create(['code' => 'WARD-QUEUE', 'name' => 'Queue Test Ward']);
+        $station->wards()->attach($ward->id);
+
+        foreach ([
+            EmergencyJob::STATUS_RECEIVED => 'QUEUE-RECEIVED',
+            EmergencyJob::STATUS_ASSIGNED => 'QUEUE-ASSIGNED',
+            EmergencyJob::STATUS_EN_ROUTE => 'QUEUE-EN-ROUTE',
+            EmergencyJob::STATUS_ARRIVED => 'QUEUE-ARRIVED',
+            EmergencyJob::STATUS_IN_PROGRESS => 'QUEUE-IN-PROGRESS',
+            EmergencyJob::STATUS_COMPLETED => 'QUEUE-COMPLETED',
+        ] as $status => $jobId) {
+            EmergencyJob::query()->create([
+                'job_id' => $jobId,
+                'caller_name' => 'Queue Test Caller',
+                'caller_phone' => '+91-90000-01010',
+                'incident_type' => 'STRUCTURE_FIRE',
+                'priority' => 'HIGH',
+                'occurred_at' => now(),
+                'ward_id' => $ward->id,
+                'incident_address' => 'Queue Test Location',
+                'status' => $status,
+            ]);
+        }
+
+        $this->actingAs($stationAdmin)
+            ->get('/jobs/active')
+            ->assertOk()
+            ->assertSee('QUEUE-ASSIGNED')
+            ->assertSee('QUEUE-EN-ROUTE')
+            ->assertSee('QUEUE-ARRIVED')
+            ->assertSee('QUEUE-IN-PROGRESS')
+            ->assertDontSee('QUEUE-RECEIVED')
+            ->assertDontSee('QUEUE-COMPLETED');
+
+        $this->get('/jobs/en-route')
+            ->assertOk()
+            ->assertSee('QUEUE-EN-ROUTE')
+            ->assertDontSee('QUEUE-ASSIGNED');
+
+        $this->get('/jobs/completed')
+            ->assertOk()
+            ->assertSee('QUEUE-COMPLETED')
+            ->assertDontSee('QUEUE-IN-PROGRESS');
     }
 
     public function test_pages_require_their_configured_permissions_for_authenticated_users(): void

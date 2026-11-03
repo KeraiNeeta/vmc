@@ -10,9 +10,11 @@
             <h1>User management</h1>
             <p class="muted">Review each account&apos;s role, station assignments, and recent activity.</p>
         </div>
-        @if (auth()->user()->hasPermission('users.manage'))
-            <a class="button button-primary" href="{{ route('users.create') }}">+ Add user</a>
-        @endif
+        <div class="page-heading-actions">
+            @if (auth()->user()->hasPermission('users.manage'))
+                <a class="button button-primary" href="{{ route('users.create') }}">+ Add user</a>
+            @endif
+        </div>
     </div>
     @if (session('status'))
         <div class="success-notice" role="status">{{ session('status') }}</div>

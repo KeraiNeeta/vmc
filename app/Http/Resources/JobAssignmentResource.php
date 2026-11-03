@@ -33,6 +33,9 @@ class JobAssignmentResource extends JsonResource
             'assigned_at' => $this->assigned_at?->toIso8601String(),
             'released_at' => $this->released_at?->toIso8601String(),
             'remarks' => $this->remarks,
+            'job' => $this->whenLoaded('emergencyJob', fn () => EmergencyJobResource::make(
+                $this->emergencyJob?->loadMissing('ward'),
+            )),
         ];
     }
 }

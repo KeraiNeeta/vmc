@@ -300,39 +300,6 @@ class PageController extends Controller
         ]);
     }
 
-    public function module(Request $request, string $page)
-    {
-        $modules = [
-            'jobs' => ['title' => 'Emergency jobs', 'category' => 'Emergency dispatch', 'phase' => 'Phase 3'],
-            'jobs/new' => ['title' => 'Register an emergency', 'category' => 'Emergency dispatch', 'phase' => 'Phase 3'],
-            'jobs/pending' => ['title' => 'Pending jobs', 'category' => 'Emergency dispatch', 'phase' => 'Phase 3'],
-            'jobs/active' => ['title' => 'Active jobs', 'category' => 'Emergency dispatch', 'phase' => 'Phase 4'],
-            'jobs/scheduled' => ['title' => 'Scheduled jobs', 'category' => 'Emergency dispatch', 'phase' => 'Phase 3'],
-            'jobs/assigned' => ['title' => 'Assigned jobs', 'category' => 'Emergency dispatch', 'phase' => 'Phase 4'],
-            'jobs/en-route' => ['title' => 'En route', 'category' => 'Emergency dispatch', 'phase' => 'Phase 4'],
-            'jobs/arrived' => ['title' => 'Arrived', 'category' => 'Emergency dispatch', 'phase' => 'Phase 4'],
-            'jobs/in-progress' => ['title' => 'In-progress response', 'category' => 'Emergency dispatch', 'phase' => 'Phase 4'],
-            'jobs/completed' => ['title' => 'Completed jobs', 'category' => 'Emergency dispatch', 'phase' => 'Phase 4'],
-            'jobs/duplicates' => ['title' => 'Duplicate calls', 'category' => '112 coordination', 'phase' => 'Phase 3'],
-            'jobs/transferred' => ['title' => 'Transferred to 112', 'category' => '112 coordination', 'phase' => 'Phase 3'],
-            'tracking' => ['title' => 'Live GPS tracking', 'category' => 'Field operations', 'phase' => 'Phase 5'],
-            'vehicles' => ['title' => 'Vehicles', 'category' => 'Field operations', 'phase' => 'Phase 2'],
-            'teams' => ['title' => 'Teams & members', 'category' => 'Field operations', 'phase' => 'Phase 2'],
-            'settings' => ['title' => 'System settings', 'category' => 'Administration', 'phase' => 'Phase 8'],
-        ];
-        abort_unless(isset($modules[$page]), 404);
-        $permission = match (true) {
-            $page === 'jobs/new' => 'jobs.create',
-            str_starts_with($page, 'jobs/') => 'jobs.view',
-            $page === 'tracking' => 'gps.view',
-            $page === 'settings' => 'settings.manage',
-            default => 'jobs.view',
-        };
-        abort_if($request->user() && ! $request->user()->hasPermission($permission), 403);
-
-        return view('pages.module', ['module' => $modules[$page]]);
-    }
-
     private function stationCatalog(User $user, string $search)
     {
         $query = FireStation::query()->withCount([

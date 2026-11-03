@@ -12,6 +12,7 @@ use App\Models\Team;
 use App\Models\User;
 use App\Models\Vehicle;
 use App\Models\Ward;
+use App\Notifications\DispatchAssigned;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Relations\Relation;
@@ -417,6 +418,30 @@ class IncidentWorkflow
                     'team_id' => $team?->id,
                     'fire_station_id' => $station->id,
                 ]);
+
+                if ($team) {
+                    $recipientIds = collect([$assignment->team_leader_user_id])
+                        ->merge($team->members()->whereNull('team_members.left_at')->pluck('users.id'))
+                        ->filter()
+                        ->unique();
+                    $dispatch = [
+                        'assignment_id' => $assignment->id,
+                        'job_id' => $job->job_id,
+                        'incident_type' => $job->incident_type,
+                        'priority' => $job->priority,
+                        'caller_name' => $job->caller_name,
+                        'caller_phone' => $job->caller_phone,
+                        'society_name' => $job->society_name,
+                        'incident_address' => $job->incident_address,
+                        'fire_station' => $station->name,
+                        'vehicle_number' => $vehicle->vehicle_number,
+                        'message' => 'A new emergency response job has been assigned to your team.',
+                        'assigned_at' => $assignment->assigned_at?->toIso8601String(),
+                    ];
+
+                    User::query()->whereKey($recipientIds)->get()
+                        ->each(fn (User $recipient) => $recipient->notify(new DispatchAssigned($dispatch)));
+                }
             }
 
             if ($initialStatus !== EmergencyJob::STATUS_ASSIGNED) {
